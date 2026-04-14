@@ -54,38 +54,30 @@ export default function ProgressScreen() {
   const programStart = data?.settings?.programStart || '2026-04-14';
   const program = useCurrentProgram(programStart);
 
-  if (loading || !data) {
-    return (
-      <View style={[styles.screen, { paddingTop: insets.top }]}>
-        <Text style={styles.loadingText}>Loading...</Text>
-      </View>
-    );
-  }
-
-  const { week, benchmark } = program;
-
   // Weight data sorted by date
-  const allWeightEntries = Object.values(data.entries)
-    .filter(e => e.weight != null)
-    .sort((a, b) => a.date.localeCompare(b.date));
+  const allWeightEntries = useMemo(
+    () =>
+      data
+        ? Object.values(data.entries)
+            .filter(e => e.weight != null)
+            .sort((a, b) => a.date.localeCompare(b.date))
+        : [],
+    [data]
+  );
 
   const weightData = useMemo(() => {
-    const filtered = weightRange === '30d' ? allWeightEntries.slice(-30) : allWeightEntries;
-    return filtered;
+    return weightRange === '30d' ? allWeightEntries.slice(-30) : allWeightEntries;
   }, [allWeightEntries, weightRange]);
 
-  // Lift data
-  const getLiftData = (type: LiftType) => {
+  const liftData = useMemo(() => {
+    if (!data) return [] as LiftEntry[];
     return data.lifts
-      .filter(l => l.type === type)
+      .filter(l => l.type === liftChartType)
       .sort((a, b) => a.date.localeCompare(b.date));
-  };
-
-  const liftData = getLiftData(liftChartType);
+  }, [data, liftChartType]);
 
   // Last 14 days stats
   const last14DaysStats = useMemo(() => {
-    const today = new Date();
     const results = {
       daysLogged: 0,
       daysTrained: 0,
@@ -93,7 +85,9 @@ export default function ProgressScreen() {
       proteinTarget: 0,
       sleepTarget: 0,
     };
+    if (!data) return results;
 
+    const today = new Date();
     const trainedDates = new Set<string>();
     data.lifts.forEach(l => trainedDates.add(l.date));
 
@@ -119,6 +113,19 @@ export default function ProgressScreen() {
 
   // Weekly summary (last 7 days)
   const weeklySummary = useMemo(() => {
+    const empty = {
+      weight: null as number | null,
+      calories: null as number | null,
+      protein: null as number | null,
+      sleep: null as number | null,
+      recovery: null as number | null,
+      energy: null as number | null,
+      mood: null as number | null,
+      sessions: 0,
+      weightChange: null as number | null,
+    };
+    if (!data) return empty;
+
     const today = new Date();
     const current: DailyEntry[] = [];
     const previous: DailyEntry[] = [];
@@ -166,36 +173,6 @@ export default function ProgressScreen() {
     };
   }, [data]);
 
-  const handleExport = async () => {
-    try {
-      const json = await exportData();
-      await Share.share({
-        message: json,
-        title: 'THE GRIND — Data Export',
-      });
-    } catch (e) {
-      Alert.alert('Error', 'Failed to export data');
-    }
-  };
-
-  const handleReset = () => {
-    Alert.alert(
-      'Reset All Data',
-      'This will permanently delete all entries, lifts, and settings. This cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Reset',
-          style: 'destructive',
-          onPress: async () => {
-            await resetAllData();
-            Alert.alert('Data Reset', 'All data has been cleared.');
-          },
-        },
-      ]
-    );
-  };
-
   // Build chart data for weight
   const weightChartData = useMemo(() => {
     if (weightData.length < 2) return null;
@@ -242,6 +219,46 @@ export default function ProgressScreen() {
       legend: ['Weight', 'E1RM'],
     };
   }, [liftData, liftChartType]);
+
+  if (loading || !data) {
+    return (
+      <View style={[styles.screen, { paddingTop: insets.top }]}>
+        <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
+  }
+
+  const { week, benchmark } = program;
+
+  const handleExport = async () => {
+    try {
+      const json = await exportData();
+      await Share.share({
+        message: json,
+        title: 'THE GRIND — Data Export',
+      });
+    } catch (e) {
+      Alert.alert('Error', 'Failed to export data');
+    }
+  };
+
+  const handleReset = () => {
+    Alert.alert(
+      'Reset All Data',
+      'This will permanently delete all entries, lifts, and settings. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset',
+          style: 'destructive',
+          onPress: async () => {
+            await resetAllData();
+            Alert.alert('Data Reset', 'All data has been cleared.');
+          },
+        },
+      ]
+    );
+  };
 
   const liftBenchmark =
     liftChartType === 'squat' ? benchmark.sq : liftChartType === 'bench' ? benchmark.bn : benchmark.dl;
