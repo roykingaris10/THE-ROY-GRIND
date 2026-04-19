@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
+import Svg, { Circle, Line, Polyline, Defs, LinearGradient, Stop, Polygon } from 'react-native-svg';
 import { COLORS } from '@/lib/constants';
 
 interface MiniChartProps {
@@ -14,7 +15,9 @@ export function MiniChart({ data, color = COLORS.silver, height = 40, width: pro
   if (data.length < 2) {
     return (
       <View style={[styles.container, { height, width }]}>
-        <View style={[styles.emptyLine, { backgroundColor: COLORS.border }]} />
+        <Svg width={width} height={height}>
+          <Line x1={4} y1={height / 2} x2={width - 4} y2={height / 2} stroke={COLORS.border} strokeWidth={1} />
+        </Svg>
       </View>
     );
   }
@@ -32,75 +35,54 @@ export function MiniChart({ data, color = COLORS.silver, height = 40, width: pro
     y: pad + cH - ((val - min) / range) * cH,
   }));
 
+  const linePoints = points.map(p => `${p.x},${p.y}`).join(' ');
+  const areaPoints = `${points[0].x},${height} ${linePoints} ${points[points.length - 1].x},${height}`;
+
   return (
     <View style={[styles.container, { height, width }]}>
-      <View style={StyleSheet.absoluteFill}>
-        {/* Constellation lines connecting points */}
-        {points.map((pt, i) => {
-          if (i === 0) return null;
-          const prev = points[i - 1];
-          const dx = pt.x - prev.x;
-          const dy = pt.y - prev.y;
-          const len = Math.sqrt(dx * dx + dy * dy);
-          const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-          return (
-            <View
-              key={`line-${i}`}
-              style={{
-                position: 'absolute',
-                left: prev.x,
-                top: prev.y,
-                width: len,
-                height: 1,
-                backgroundColor: color,
-                opacity: 0.5,
-                transform: [{ rotate: `${angle}deg` }],
-                transformOrigin: 'left center',
-              }}
-            />
-          );
-        })}
-        {/* Star dots at each data point */}
+      <Svg width={width} height={height}>
+        <Defs>
+          <LinearGradient id={`miniGrad-${color}`} x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0%" stopColor={color} stopOpacity="0.15" />
+            <Stop offset="100%" stopColor={color} stopOpacity="0" />
+          </LinearGradient>
+        </Defs>
+
+        {/* Area fill */}
+        <Polygon points={areaPoints} fill={`url(#miniGrad-${color})`} />
+
+        {/* Line */}
+        <Polyline
+          points={linePoints}
+          fill="none"
+          stroke={color}
+          strokeWidth={1.5}
+          opacity={0.6}
+        />
+
+        {/* Dots */}
         {points.map((pt, i) => {
           const isLast = i === points.length - 1;
-          const dotSize = isLast ? 7 : 5;
           return (
             <React.Fragment key={`dot-${i}`}>
-              {/* Glow behind the dot */}
-              <View
-                style={{
-                  position: 'absolute',
-                  left: pt.x - (dotSize + 4) / 2,
-                  top: pt.y - (dotSize + 4) / 2,
-                  width: dotSize + 4,
-                  height: dotSize + 4,
-                  borderRadius: (dotSize + 4) / 2,
-                  backgroundColor: color,
-                  opacity: isLast ? 0.25 : 0.12,
-                }}
-              />
-              {/* The dot itself */}
-              <View
-                style={{
-                  position: 'absolute',
-                  left: pt.x - dotSize / 2,
-                  top: pt.y - dotSize / 2,
-                  width: dotSize,
-                  height: dotSize,
-                  borderRadius: dotSize / 2,
-                  backgroundColor: color,
-                  opacity: isLast ? 1 : 0.8,
-                }}
+              {isLast && (
+                <Circle cx={pt.x} cy={pt.y} r={6} fill={color} opacity={0.15} />
+              )}
+              <Circle
+                cx={pt.x}
+                cy={pt.y}
+                r={isLast ? 3.5 : 2}
+                fill={color}
+                opacity={isLast ? 1 : 0.7}
               />
             </React.Fragment>
           );
         })}
-      </View>
+      </Svg>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { position: 'relative', overflow: 'hidden' },
-  emptyLine: { position: 'absolute', left: 4, right: 4, top: '50%', height: 1 },
 });

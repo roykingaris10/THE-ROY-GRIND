@@ -1,5 +1,6 @@
-import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Animated, Text } from 'react-native';
+import React from 'react';
+import { View, StyleSheet, Text, Platform } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { COLORS } from '@/lib/constants';
 
 interface CardProps {
@@ -7,22 +8,19 @@ interface CardProps {
   style?: object;
   delay?: number;
   borderColor?: string;
+  glow?: boolean;
 }
 
-export function Card({ children, style, delay = 0, borderColor }: CardProps) {
-  const opacity = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(10)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(opacity, { toValue: 1, duration: 300, delay, useNativeDriver: true }),
-      Animated.timing(translateY, { toValue: 0, duration: 300, delay, useNativeDriver: true }),
-    ]).start();
-  }, [delay]);
-
+export function Card({ children, style, delay = 0, borderColor, glow }: CardProps) {
   return (
     <Animated.View
-      style={[styles.card, { opacity, transform: [{ translateY }] }, borderColor ? { borderColor } : undefined, style]}
+      entering={FadeInDown.delay(delay).duration(350).springify().damping(18)}
+      style={[
+        styles.card,
+        borderColor ? { borderColor } : undefined,
+        glow && styles.cardGlow,
+        style,
+      ]}
     >
       {children}
     </Animated.View>
@@ -42,9 +40,32 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.card,
     borderWidth: 1,
     borderColor: COLORS.border,
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 16,
     marginBottom: 12,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#6B4E9E',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.12,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 6,
+      },
+    }),
+  },
+  cardGlow: {
+    ...Platform.select({
+      ios: {
+        shadowColor: COLORS.gold,
+        shadowOpacity: 0.2,
+        shadowRadius: 16,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
   },
   labelContainer: { marginBottom: 8, marginTop: 4 },
   label: {
@@ -52,6 +73,6 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1.5,
     color: COLORS.label,
-    fontFamily: 'monospace',
+    fontFamily: Platform.select({ ios: 'Menlo', default: 'monospace' }),
   },
 });

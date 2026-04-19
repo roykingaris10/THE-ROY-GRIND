@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Alert,
   Platform,
+  Keyboard,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -89,6 +90,7 @@ export default function SettingsScreen() {
         style={styles.scroll}
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
       >
         <Card>
           <XPBar xp={gam.xp} level={gam.level} progress={gam.levelProgress} xpToNext={gam.xpToNext} />
@@ -165,6 +167,8 @@ function InputRow({ label, value, onChange, kbd }: { label: string; value: strin
         onChangeText={onChange}
         keyboardType={kbd || 'default'}
         placeholderTextColor={COLORS.textMuted}
+        returnKeyType="done"
+        onSubmitEditing={() => Keyboard.dismiss()}
       />
     </View>
   );
@@ -186,7 +190,7 @@ const styles = StyleSheet.create({
   topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: COLORS.border },
   closeBtn: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: COLORS.ghostBorder, alignItems: 'center', justifyContent: 'center' },
   closeText: { fontSize: 16, color: COLORS.textPrimary, fontFamily: mono },
-  title: { fontSize: 16, fontWeight: '900', color: COLORS.silverBright, fontFamily: mono, letterSpacing: 2 },
+  title: { fontSize: 18, fontFamily: 'Cinzel_700Bold', color: COLORS.silverBright, letterSpacing: 3 },
   scroll: { flex: 1 },
   content: { paddingHorizontal: 16, paddingTop: 12 },
   inputGroup: { marginBottom: 16 },

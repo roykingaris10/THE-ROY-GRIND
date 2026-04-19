@@ -1,7 +1,15 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
+import Svg, { Circle } from 'react-native-svg';
+import Animated, {
+  useSharedValue,
+  useAnimatedProps,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
 import { COLORS } from '@/lib/constants';
 
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 const mono = Platform.select({ ios: 'Menlo', default: 'monospace' });
 
 interface ProgressRingProps {
@@ -14,65 +22,69 @@ interface ProgressRingProps {
 export function ProgressRing({ progress, size = 60, label, color = COLORS.primary }: ProgressRingProps) {
   const clamped = Math.max(0, Math.min(1, progress));
   const pct = Math.round(clamped * 100);
-  const strokeWidth = Math.max(2, Math.round(size / 18));
+  const strokeWidth = Math.max(3, Math.round(size / 14));
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const center = size / 2;
 
-  // Build arc segments for a cleaner rendering
-  // We split into 4 quadrants: top-right, bottom-right, bottom-left, top-left
-  const segments = [
-    { threshold: 0,    prop: 'borderRightColor' as const },
-    { threshold: 0.25, prop: 'borderBottomColor' as const },
-    { threshold: 0.5,  prop: 'borderLeftColor' as const },
-    { threshold: 0.75, prop: 'borderTopColor' as const },
-  ];
+  const animProgress = useSharedValue(0);
 
-  const segmentColors: Record<string, string> = {};
-  for (const seg of segments) {
-    segmentColors[seg.prop] = clamped > seg.threshold ? color : 'transparent';
-  }
+  useEffect(() => {
+    animProgress.value = withTiming(clamped, {
+      duration: 700,
+      easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+    });
+  }, [clamped]);
+
+  const animatedProps = useAnimatedProps(() => ({
+    strokeDashoffset: circumference * (1 - animProgress.value),
+  }));
 
   return (
     <View style={[styles.container, { width: size, height: size }]}>
-      {/* Track ring */}
-      <View
-        style={[
-          styles.ring,
-          {
-            width: size,
-            height: size,
-            borderRadius: size / 2,
-            borderWidth: strokeWidth,
-            borderColor: COLORS.border,
-          },
-        ]}
-      />
-      {/* Filled ring */}
-      <View
-        style={[
-          styles.ring,
-          {
-            width: size,
-            height: size,
-            borderRadius: size / 2,
-            borderWidth: strokeWidth,
-            borderColor: 'transparent',
-            ...segmentColors,
-          },
-        ]}
-      />
-      {/* Center content */}
-      <Text style={[styles.pct, { fontSize: Math.round(size / 4.5) }]}>{pct}%</Text>
-      {label && (
-        <Text style={[styles.label, { fontSize: Math.max(6, Math.round(size / 9)) }]} numberOfLines={1}>
-          {label}
-        </Text>
-      )}
+      <Svg width={size} height={size}>
+        <Circle
+          cx={center}
+          cy={center}
+          r={radius}
+          stroke={COLORS.border}
+          strokeWidth={strokeWidth}
+          fill="none"
+          opacity={0.5}
+        />
+        <AnimatedCircle
+          cx={center}
+          cy={center}
+          r={radius}
+          stroke={color}
+          strokeWidth={strokeWidth}
+          fill="none"
+          strokeDasharray={circumference}
+          animatedProps={animatedProps}
+          strokeLinecap="round"
+          rotation={-90}
+          origin={`${center}, ${center}`}
+        />
+      </Svg>
+      <View style={styles.centerContent}>
+        <Text style={[styles.pct, { fontSize: Math.round(size / 4.5) }]}>{pct}%</Text>
+        {label && (
+          <Text style={[styles.label, { fontSize: Math.max(6, Math.round(size / 9)) }]} numberOfLines={1}>
+            {label}
+          </Text>
+        )}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { alignItems: 'center', justifyContent: 'center' },
-  ring: { position: 'absolute' },
+  centerContent: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   pct: { fontFamily: mono, fontWeight: '700', color: COLORS.textPrimary },
   label: {
     color: COLORS.textMuted,

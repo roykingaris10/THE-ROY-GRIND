@@ -11,18 +11,22 @@
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0F0F0F"
+      "backgroundColor": "#0A0814"
     },
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.invictus.fitness",
+      "buildNumber": "1",
       "infoPlist": {
         "NSMotionUsageDescription": "Invictus uses motion data to count your daily steps."
       }
     },
     "android": {
+      "package": "com.invictus.fitness",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#0F0F0F"
+        "backgroundColor": "#0A0814"
       },
       "edgeToEdgeEnabled": true
     },

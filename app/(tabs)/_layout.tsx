@@ -24,7 +24,7 @@ export default function TabLayout() {
           paddingTop: 8,
         },
         tabBarLabelStyle: {
-          fontFamily: Platform.select({ ios: 'Menlo', default: 'monospace' }),
+          fontFamily: 'Cinzel_700Bold',
           fontSize: 9,
           letterSpacing: 1,
           textTransform: 'uppercase',

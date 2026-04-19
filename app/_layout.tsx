@@ -1,7 +1,19 @@
 import React, { useEffect } from 'react';
-import { StatusBar } from 'react-native';
+import { StatusBar, View, Text, StyleSheet, Platform, ActivityIndicator } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import * as SplashScreen from 'expo-splash-screen';
+import {
+  useFonts,
+  Cinzel_400Regular,
+  Cinzel_700Bold,
+  Cinzel_900Black,
+} from '@expo-google-fonts/cinzel';
+import {
+  JetBrainsMono_400Regular,
+  JetBrainsMono_500Medium,
+  JetBrainsMono_700Bold,
+} from '@expo-google-fonts/jetbrains-mono';
 import { AppDataProvider, useAppData } from '@/hooks/useAppData';
 import { COLORS } from '@/lib/constants';
 
@@ -10,6 +22,8 @@ export { ErrorBoundary } from 'expo-router';
 export const unstable_settings = {
   initialRouteName: '(tabs)',
 };
+
+SplashScreen.preventAutoHideAsync();
 
 function RootNav() {
   const { data, loading } = useAppData();
@@ -44,6 +58,29 @@ function RootNav() {
 }
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    Cinzel_400Regular,
+    Cinzel_700Bold,
+    Cinzel_900Black,
+    JetBrainsMono_400Regular,
+    JetBrainsMono_500Medium,
+    JetBrainsMono_700Bold,
+  });
+
+  useEffect(() => {
+    if (fontsLoaded) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded]);
+
+  if (!fontsLoaded) {
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator color={COLORS.primary} size="large" />
+      </View>
+    );
+  }
+
   return (
     <SafeAreaProvider>
       <AppDataProvider>
@@ -53,3 +90,12 @@ export default function RootLayout() {
     </SafeAreaProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  loading: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});

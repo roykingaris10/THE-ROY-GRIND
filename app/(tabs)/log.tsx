@@ -8,7 +8,10 @@ import {
   TouchableOpacity,
   Platform,
   ActivityIndicator,
+  Keyboard,
+  InputAccessoryView,
 } from 'react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { useAppData } from '@/hooks/useAppData';
@@ -16,22 +19,25 @@ import { useCurrentProgram } from '@/hooks/useCurrentProgram';
 import { useCalorieBalance } from '@/hooks/useCalorieBalance';
 import { getDateString, addDays, formatDate, clamp } from '@/lib/helpers';
 import { COLORS } from '@/lib/constants';
+import { FONTS } from '@/lib/typography';
+import { playTap, playSelection } from '@/lib/sounds';
 import { getTodaySteps } from '@/lib/pedometer';
 import { Card, SectionLabel } from '@/components/Card';
 import { SliderInput } from '@/components/SliderInput';
 import { CalorieBalanceCard } from '@/components/CalorieBalanceCard';
 import { ActivityInputCard } from '@/components/ActivityInputCard';
 import { TDEEBreakdownView } from '@/components/TDEEBreakdown';
+import { DebouncedInput } from '@/components/DebouncedInput';
 
 const mono = Platform.select({ ios: 'Menlo', default: 'monospace' });
 const TODAY = getDateString(new Date());
+const INPUT_ACCESSORY_ID = 'log-input-done';
 
 export default function LogScreen() {
   const insets = useSafeAreaInsets();
   const { data, loading, updateEntry } = useAppData();
   const [selectedDate, setSelectedDate] = useState(TODAY);
   const [tdeeExpanded, setTdeeExpanded] = useState(false);
-  const debounceTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   const programStart = data?.settings?.programStart || '2026-04-14';
   const { week, nutritionPhase } = useCurrentProgram(programStart);
@@ -40,7 +46,6 @@ export default function LogScreen() {
 
   const entry = data?.entries[selectedDate] || { date: selectedDate };
 
-  // Auto-sync steps on mount if setting enabled and date is today
   useEffect(() => {
     if (!data || selectedDate !== TODAY) return;
     if (!data.settings.autoSyncSteps) return;
@@ -53,55 +58,37 @@ export default function LogScreen() {
     })();
   }, [data?.settings?.autoSyncSteps, selectedDate]);
 
-  // Debounced update
-  const debouncedUpdate = useCallback(
-    (field: string, value: any) => {
-      if (debounceTimers.current[field]) {
-        clearTimeout(debounceTimers.current[field]);
-      }
-      debounceTimers.current[field] = setTimeout(() => {
-        updateEntry(selectedDate, { [field]: value });
-      }, 400);
+  const handleFieldUpdate = useCallback(
+    (field: string, parser: (t: string) => any) => (text: string) => {
+      const parsed = text ? parser(text) : undefined;
+      updateEntry(selectedDate, { [field]: parsed });
     },
     [selectedDate, updateEntry],
   );
 
-  // Immediate update (for sliders / taps)
   const immediateUpdate = useCallback(
     (field: string, value: any) => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      playSelection();
       updateEntry(selectedDate, { [field]: value });
     },
     [selectedDate, updateEntry],
   );
 
-  // Activity card handler
   const handleActivityUpdate = useCallback(
     (field: string, value: any) => {
       if (field === 'ebikeMinutes') {
         immediateUpdate(field, value);
       } else {
-        debouncedUpdate(field, value);
+        updateEntry(selectedDate, { [field]: value });
       }
     },
-    [debouncedUpdate, immediateUpdate],
+    [selectedDate, updateEntry, immediateUpdate],
   );
 
-  // Date navigation
-  const goBack = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setSelectedDate(prev => addDays(prev, -1));
-  };
-  const goForward = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setSelectedDate(prev => addDays(prev, 1));
-  };
-  const goToday = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setSelectedDate(TODAY);
-  };
+  const goBack = () => { playTap(); setSelectedDate(prev => addDays(prev, -1)); };
+  const goForward = () => { playTap(); setSelectedDate(prev => addDays(prev, 1)); };
+  const goToday = () => { playTap(); setSelectedDate(TODAY); };
 
-  // Find session for selected date
   const session = data?.sessions.find(s => s.date === selectedDate) || null;
   const trainingBurn = tdee.training;
   const trainingDuration = session?.startTime && session?.endTime
@@ -110,7 +97,6 @@ export default function LogScreen() {
       )
     : null;
 
-  // Nutrition target border colors
   const calInRange =
     (entry.calories || 0) === 0 ||
     ((entry.calories || 0) >= target.min && (entry.calories || 0) <= target.max);
@@ -136,17 +122,28 @@ export default function LogScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* ── DATE PICKER ── */}
+      {/* Done button for numeric keyboards */}
+      {Platform.OS === 'ios' && (
+        <InputAccessoryView nativeID={INPUT_ACCESSORY_ID}>
+          <View style={styles.accessoryBar}>
+            <TouchableOpacity onPress={Keyboard.dismiss} style={styles.doneBtn}>
+              <Text style={styles.doneBtnText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        </InputAccessoryView>
+      )}
+
+      {/* Date picker */}
       <View style={styles.datePicker}>
         <TouchableOpacity onPress={goBack} style={styles.arrow} activeOpacity={0.6}>
-          <Text style={styles.arrowText}>{'◀'}</Text>
+          <Text style={styles.arrowText}>{'\u25C0'}</Text>
         </TouchableOpacity>
         <View style={styles.dateCenter}>
           <Text style={styles.dateText}>{formatDate(selectedDate)}</Text>
           <Text style={styles.dateSub}>{selectedDate}</Text>
         </View>
         <TouchableOpacity onPress={goForward} style={styles.arrow} activeOpacity={0.6}>
-          <Text style={styles.arrowText}>{'▶'}</Text>
+          <Text style={styles.arrowText}>{'\u25B6'}</Text>
         </TouchableOpacity>
         {selectedDate !== TODAY && (
           <TouchableOpacity onPress={goToday} style={styles.todayBtn} activeOpacity={0.7}>
@@ -159,9 +156,10 @@ export default function LogScreen() {
         style={styles.scroll}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 80 }]}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
       >
-        {/* ── DAILY BALANCE SUMMARY ── */}
+        {/* Daily balance */}
         <CalorieBalanceCard
           caloriesIn={caloriesIn}
           tdee={tdee}
@@ -170,36 +168,38 @@ export default function LogScreen() {
           compact
         />
 
-        {/* ── BODY ── */}
+        {/* Body */}
         <SectionLabel>BODY</SectionLabel>
         <Card delay={50}>
           <View style={styles.row}>
             <View style={styles.halfInput}>
               <Text style={styles.inputLabel}>Weight (kg)</Text>
-              <TextInput
+              <DebouncedInput
                 style={styles.input}
                 value={entry.weight != null ? String(entry.weight) : ''}
-                onChangeText={t => debouncedUpdate('weight', t ? parseFloat(t) || undefined : undefined)}
+                onDebouncedChange={handleFieldUpdate('weight', parseFloat)}
                 keyboardType="decimal-pad"
-                placeholder="—"
+                placeholder="\u2014"
                 placeholderTextColor={COLORS.textMuted}
+                inputAccessoryViewID={Platform.OS === 'ios' ? INPUT_ACCESSORY_ID : undefined}
               />
             </View>
             <View style={styles.halfInput}>
               <Text style={styles.inputLabel}>Waist (cm)</Text>
-              <TextInput
+              <DebouncedInput
                 style={styles.input}
                 value={entry.waist != null ? String(entry.waist) : ''}
-                onChangeText={t => debouncedUpdate('waist', t ? parseFloat(t) || undefined : undefined)}
+                onDebouncedChange={handleFieldUpdate('waist', parseFloat)}
                 keyboardType="decimal-pad"
-                placeholder="—"
+                placeholder="\u2014"
                 placeholderTextColor={COLORS.textMuted}
+                inputAccessoryViewID={Platform.OS === 'ios' ? INPUT_ACCESSORY_ID : undefined}
               />
             </View>
           </View>
         </Card>
 
-        {/* ── NUTRITION IN ── */}
+        {/* Nutrition */}
         <SectionLabel>NUTRITION IN</SectionLabel>
         <Card
           delay={100}
@@ -210,14 +210,14 @@ export default function LogScreen() {
           }
         >
           <Text style={styles.phaseTag}>
-            {nutritionPhase.name} — Week {week}
+            {nutritionPhase.name} \u2014 Week {week}
           </Text>
           <View style={styles.row}>
             <View style={styles.halfInput}>
               <Text style={styles.inputLabel}>
-                Calories ({target.min}–{target.max})
+                Calories ({target.min}\u2013{target.max})
               </Text>
-              <TextInput
+              <DebouncedInput
                 style={[
                   styles.input,
                   (entry.calories || 0) > 0 && {
@@ -225,19 +225,18 @@ export default function LogScreen() {
                   },
                 ]}
                 value={entry.calories != null ? String(entry.calories) : ''}
-                onChangeText={t =>
-                  debouncedUpdate('calories', t ? parseInt(t) || undefined : undefined)
-                }
+                onDebouncedChange={handleFieldUpdate('calories', (t) => parseInt(t))}
                 keyboardType="number-pad"
                 placeholder="kcal"
                 placeholderTextColor={COLORS.textMuted}
+                inputAccessoryViewID={Platform.OS === 'ios' ? INPUT_ACCESSORY_ID : undefined}
               />
             </View>
             <View style={styles.halfInput}>
               <Text style={styles.inputLabel}>
-                Protein ({nutritionPhase.protein[0]}–{nutritionPhase.protein[1]}g)
+                Protein ({nutritionPhase.protein[0]}\u2013{nutritionPhase.protein[1]}g)
               </Text>
-              <TextInput
+              <DebouncedInput
                 style={[
                   styles.input,
                   (entry.protein || 0) > 0 && {
@@ -245,21 +244,20 @@ export default function LogScreen() {
                   },
                 ]}
                 value={entry.protein != null ? String(entry.protein) : ''}
-                onChangeText={t =>
-                  debouncedUpdate('protein', t ? parseInt(t) || undefined : undefined)
-                }
+                onDebouncedChange={handleFieldUpdate('protein', (t) => parseInt(t))}
                 keyboardType="number-pad"
                 placeholder="g"
                 placeholderTextColor={COLORS.textMuted}
+                inputAccessoryViewID={Platform.OS === 'ios' ? INPUT_ACCESSORY_ID : undefined}
               />
             </View>
           </View>
           <View style={styles.row}>
             <View style={styles.halfInput}>
               <Text style={styles.inputLabel}>
-                Carbs ({nutritionPhase.carbs[0]}–{nutritionPhase.carbs[1]}g)
+                Carbs ({nutritionPhase.carbs[0]}\u2013{nutritionPhase.carbs[1]}g)
               </Text>
-              <TextInput
+              <DebouncedInput
                 style={[
                   styles.input,
                   (entry.carbs || 0) > 0 && {
@@ -267,19 +265,18 @@ export default function LogScreen() {
                   },
                 ]}
                 value={entry.carbs != null ? String(entry.carbs) : ''}
-                onChangeText={t =>
-                  debouncedUpdate('carbs', t ? parseInt(t) || undefined : undefined)
-                }
+                onDebouncedChange={handleFieldUpdate('carbs', (t) => parseInt(t))}
                 keyboardType="number-pad"
                 placeholder="g"
                 placeholderTextColor={COLORS.textMuted}
+                inputAccessoryViewID={Platform.OS === 'ios' ? INPUT_ACCESSORY_ID : undefined}
               />
             </View>
             <View style={styles.halfInput}>
               <Text style={styles.inputLabel}>
-                Fat ({nutritionPhase.fat[0]}–{nutritionPhase.fat[1]}g)
+                Fat ({nutritionPhase.fat[0]}\u2013{nutritionPhase.fat[1]}g)
               </Text>
-              <TextInput
+              <DebouncedInput
                 style={[
                   styles.input,
                   (entry.fat || 0) > 0 && {
@@ -287,18 +284,17 @@ export default function LogScreen() {
                   },
                 ]}
                 value={entry.fat != null ? String(entry.fat) : ''}
-                onChangeText={t =>
-                  debouncedUpdate('fat', t ? parseInt(t) || undefined : undefined)
-                }
+                onDebouncedChange={handleFieldUpdate('fat', (t) => parseInt(t))}
                 keyboardType="number-pad"
                 placeholder="g"
                 placeholderTextColor={COLORS.textMuted}
+                inputAccessoryViewID={Platform.OS === 'ios' ? INPUT_ACCESSORY_ID : undefined}
               />
             </View>
           </View>
         </Card>
 
-        {/* ── ACTIVITY OUT ── */}
+        {/* Activity */}
         <SectionLabel>ACTIVITY OUT</SectionLabel>
         <Card delay={150}>
           <ActivityInputCard
@@ -314,15 +310,15 @@ export default function LogScreen() {
           />
         </Card>
 
-        {/* ── TDEE BREAKDOWN (expandable) ── */}
+        {/* TDEE */}
         <TouchableOpacity
           onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            playTap();
             setTdeeExpanded(prev => !prev);
           }}
           activeOpacity={0.7}
         >
-          <SectionLabel>{tdeeExpanded ? 'TDEE BREAKDOWN ▾' : 'TDEE BREAKDOWN ▸'}</SectionLabel>
+          <SectionLabel>{tdeeExpanded ? 'TDEE BREAKDOWN \u25BE' : 'TDEE BREAKDOWN \u25B8'}</SectionLabel>
         </TouchableOpacity>
         {tdeeExpanded && (
           <Card delay={0}>
@@ -330,49 +326,46 @@ export default function LogScreen() {
           </Card>
         )}
 
-        {/* ── RECOVERY ── */}
+        {/* Recovery */}
         <SectionLabel>RECOVERY</SectionLabel>
         <Card delay={200}>
           <View style={styles.row}>
             <View style={styles.halfInput}>
               <Text style={styles.inputLabel}>Sleep (hrs)</Text>
-              <TextInput
+              <DebouncedInput
                 style={styles.input}
                 value={entry.sleep != null ? String(entry.sleep) : ''}
-                onChangeText={t =>
-                  debouncedUpdate('sleep', t ? parseFloat(t) || undefined : undefined)
-                }
+                onDebouncedChange={handleFieldUpdate('sleep', parseFloat)}
                 keyboardType="decimal-pad"
-                placeholder="—"
+                placeholder="\u2014"
                 placeholderTextColor={COLORS.textMuted}
+                inputAccessoryViewID={Platform.OS === 'ios' ? INPUT_ACCESSORY_ID : undefined}
               />
             </View>
             <View style={styles.halfInput}>
               <Text style={styles.inputLabel}>Resting HR</Text>
-              <TextInput
+              <DebouncedInput
                 style={styles.input}
                 value={entry.restingHR != null ? String(entry.restingHR) : ''}
-                onChangeText={t =>
-                  debouncedUpdate('restingHR', t ? parseInt(t) || undefined : undefined)
-                }
+                onDebouncedChange={handleFieldUpdate('restingHR', (t) => parseInt(t))}
                 keyboardType="number-pad"
                 placeholder="bpm"
                 placeholderTextColor={COLORS.textMuted}
+                inputAccessoryViewID={Platform.OS === 'ios' ? INPUT_ACCESSORY_ID : undefined}
               />
             </View>
           </View>
           <View style={[styles.row, { marginBottom: 0 }]}>
             <View style={styles.halfInput}>
               <Text style={styles.inputLabel}>HRV</Text>
-              <TextInput
+              <DebouncedInput
                 style={styles.input}
                 value={entry.hrv != null ? String(entry.hrv) : ''}
-                onChangeText={t =>
-                  debouncedUpdate('hrv', t ? parseInt(t) || undefined : undefined)
-                }
+                onDebouncedChange={handleFieldUpdate('hrv', (t) => parseInt(t))}
                 keyboardType="number-pad"
                 placeholder="ms"
                 placeholderTextColor={COLORS.textMuted}
+                inputAccessoryViewID={Platform.OS === 'ios' ? INPUT_ACCESSORY_ID : undefined}
               />
             </View>
             <View style={styles.halfInput} />
@@ -397,18 +390,20 @@ export default function LogScreen() {
           </View>
         </Card>
 
-        {/* ── NOTES ── */}
+        {/* Notes */}
         <SectionLabel>NOTES</SectionLabel>
         <Card delay={250}>
-          <TextInput
+          <DebouncedInput
             style={styles.notesInput}
             value={entry.notes || ''}
-            onChangeText={t => debouncedUpdate('notes', t)}
+            onDebouncedChange={text => updateEntry(selectedDate, { notes: text })}
             placeholder="How did today go? Anything to note..."
             placeholderTextColor={COLORS.textMuted}
             multiline
             numberOfLines={4}
             textAlignVertical="top"
+            returnKeyType="default"
+            onSubmitEditing={undefined}
           />
         </Card>
       </ScrollView>
@@ -433,7 +428,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
 
-  /* ── Date picker ── */
+  accessoryBar: {
+    backgroundColor: COLORS.card,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  doneBtn: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  doneBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#E8EAF0',
+    fontFamily: mono,
+  },
+
   datePicker: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -474,7 +490,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: 4,
+    borderRadius: 6,
   },
   todayText: {
     fontSize: 10,
@@ -484,7 +500,6 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
 
-  /* ── Inputs ── */
   row: {
     flexDirection: 'row',
     gap: 12,
@@ -504,7 +519,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
     borderWidth: 1,
     borderColor: COLORS.border,
-    borderRadius: 8,
+    borderRadius: 10,
     padding: 12,
     fontSize: 16,
     color: COLORS.textPrimary,
@@ -519,17 +534,15 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
 
-  /* ── Recovery ── */
   sliderGroup: {
     marginTop: 16,
   },
 
-  /* ── Notes ── */
   notesInput: {
     backgroundColor: COLORS.background,
     borderWidth: 1,
     borderColor: COLORS.border,
-    borderRadius: 8,
+    borderRadius: 10,
     padding: 12,
     fontSize: 14,
     color: COLORS.textPrimary,

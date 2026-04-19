@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Platform, Keyboard } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '@/lib/constants';
 import { useAppData } from '@/hooks/useAppData';
 import { getDateString } from '@/lib/helpers';
+import { playTap, playSuccess } from '@/lib/sounds';
 
 const mono = Platform.select({ ios: 'Menlo', default: 'monospace' });
 
@@ -29,10 +30,10 @@ export default function OnboardingScreen() {
   const [reminderEnabled, setReminderEnabled] = useState(true);
   const [reminderTime, setReminderTime] = useState('21:00');
 
-  const next = () => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setStep(s => s + 1); };
+  const next = () => { playTap(); setStep(s => s + 1); };
 
   const finish = async () => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    playSuccess();
     await updateProfile({ age: parseInt(age), sex, heightCm: parseInt(height), startingWeight: parseFloat(startWeight) });
     await updateSettings({
       programStart: startDate,
@@ -151,7 +152,7 @@ function InputRow({ label, value, onChange, kbd, color }: { label: string; value
   return (
     <View style={styles.inputGroup}>
       <Text style={[styles.fieldLabel, color ? { color } : undefined]}>{label}</Text>
-      <TextInput style={[styles.input, color ? { borderColor: color } : undefined]} value={value} onChangeText={onChange} keyboardType={kbd || 'default'} placeholderTextColor={COLORS.textMuted} />
+      <TextInput style={[styles.input, color ? { borderColor: color } : undefined]} value={value} onChangeText={onChange} keyboardType={kbd || 'default'} placeholderTextColor={COLORS.textMuted} returnKeyType="done" onSubmitEditing={() => Keyboard.dismiss()} />
     </View>
   );
 }
@@ -161,17 +162,17 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { padding: 24, flexGrow: 1 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 20 },
-  crossIcon: { fontSize: 40, color: COLORS.silver, marginBottom: 12 },
-  huge: { fontSize: 36, fontWeight: '900', color: COLORS.silverBright, fontFamily: mono, letterSpacing: 6 },
-  divider: { width: 60, height: 3, backgroundColor: COLORS.primary, marginVertical: 16 },
-  tagline: { fontSize: 11, fontWeight: '700', color: COLORS.silver, fontFamily: mono, letterSpacing: 2, textAlign: 'center' },
+  crossIcon: { fontSize: 40, color: COLORS.gold, marginBottom: 12 },
+  huge: { fontSize: 38, fontFamily: 'Cinzel_900Black', color: COLORS.silverBright, letterSpacing: 6 },
+  divider: { width: 60, height: 3, backgroundColor: COLORS.gold, marginVertical: 16, borderRadius: 2 },
+  tagline: { fontSize: 11, fontFamily: 'Cinzel_700Bold', color: COLORS.silver, letterSpacing: 2, textAlign: 'center' },
   sub: { fontSize: 10, color: COLORS.textMuted, fontFamily: mono, letterSpacing: 1, marginTop: 6 },
   desc: { fontSize: 12, color: COLORS.textSecondary, fontFamily: mono, lineHeight: 20, textAlign: 'center', paddingHorizontal: 10 },
-  verse: { fontSize: 11, color: COLORS.textPrimary, fontFamily: mono, lineHeight: 18, textAlign: 'center', paddingHorizontal: 8, fontStyle: 'italic' },
+  verse: { fontSize: 11, color: COLORS.textPrimary, fontFamily: 'Cinzel_400Regular', lineHeight: 20, textAlign: 'center', paddingHorizontal: 8, fontStyle: 'italic' },
   verseRef: { fontSize: 9, color: COLORS.purpleWarm, fontFamily: mono, letterSpacing: 1, marginTop: 8, fontWeight: '700' },
   blessing: { fontSize: 11, color: COLORS.silver, fontFamily: mono, textAlign: 'center', fontWeight: '700', letterSpacing: 1 },
   stepLabel: { fontSize: 10, color: COLORS.primary, fontFamily: mono, letterSpacing: 2, fontWeight: '700', marginBottom: 8 },
-  stepTitle: { fontSize: 22, fontWeight: '900', color: COLORS.silverBright, fontFamily: mono, letterSpacing: 2, marginBottom: 24 },
+  stepTitle: { fontSize: 22, fontFamily: 'Cinzel_700Bold', color: COLORS.silverBright, letterSpacing: 2, marginBottom: 24 },
   inputGroup: { marginBottom: 20 },
   fieldLabel: { fontSize: 10, color: COLORS.label, fontFamily: mono, letterSpacing: 1.5, fontWeight: '700', marginBottom: 8 },
   input: { backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.border, borderRadius: 8, padding: 14, fontSize: 18, color: COLORS.textPrimary, fontFamily: mono },

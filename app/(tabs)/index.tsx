@@ -13,7 +13,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 
+import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, PROGRAM_START_DEFAULT, BENCHMARKS_REALISTIC } from '@/lib/constants';
+import { FONTS } from '@/lib/typography';
 import { useAppData } from '@/hooks/useAppData';
 import { useCurrentProgram } from '@/hooks/useCurrentProgram';
 import { useCalorieBalance } from '@/hooks/useCalorieBalance';
@@ -21,6 +23,7 @@ import { useGamification } from '@/hooks/useGamification';
 import { getDateString, getBestE1RM, formatNumber } from '@/lib/helpers';
 import { getDailyVerse, getOrthodoxGreeting, getFastingInfo } from '@/lib/orthodoxCalendar';
 import { detectRedFlags } from '@/lib/redflags';
+import { playTap } from '@/lib/sounds';
 import type { LiftType } from '@/types';
 
 import { Card, SectionLabel } from '@/components/Card';
@@ -142,24 +145,29 @@ export default function DashboardScreen() {
           />
         }
       >
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <Text style={styles.cross}>{'\u2670'}</Text>
-            <Text style={styles.headerTitle}>INVICTUS</Text>
+        <LinearGradient
+          colors={['rgba(107,78,158,0.08)', 'transparent']}
+          style={styles.headerGradient}
+        >
+          <View style={styles.header}>
+            <View style={styles.headerLeft}>
+              <Text style={styles.cross}>{'\u2670'}</Text>
+              <Text style={styles.headerTitle}>INVICTUS</Text>
+            </View>
+            <View style={styles.headerRight}>
+              <Text style={styles.weekNumber}>W{week}</Text>
+              <TouchableOpacity
+                onPress={() => { playTap(); router.push('/settings'); }}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                style={styles.settingsButton}
+              >
+                <FontAwesome name="gear" size={20} color={COLORS.textSecondary} />
+              </TouchableOpacity>
+            </View>
           </View>
-          <View style={styles.headerRight}>
-            <Text style={styles.weekNumber}>W{week}</Text>
-            <TouchableOpacity
-              onPress={() => router.push('/settings')}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              style={styles.settingsButton}
-            >
-              <FontAwesome name="gear" size={20} color={COLORS.textSecondary} />
-            </TouchableOpacity>
-          </View>
-        </View>
 
-        <Text style={styles.greeting}>{greeting}</Text>
+          <Text style={styles.greeting}>{greeting}</Text>
+        </LinearGradient>
 
         <View style={styles.tagsRow}>
           <View style={styles.tag}>
@@ -334,10 +342,11 @@ const styles = StyleSheet.create({
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 16 },
   loadingText: { fontSize: 13, color: COLORS.textSecondary, fontFamily: mono, letterSpacing: 1 },
 
+  headerGradient: { marginHorizontal: -16, paddingHorizontal: 16, paddingBottom: 4, marginBottom: 4 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12, paddingBottom: 4 },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  cross: { fontSize: 22, color: COLORS.silver },
-  headerTitle: { fontSize: 22, fontWeight: '900', color: COLORS.silverBright, fontFamily: mono, letterSpacing: 3 },
+  cross: { fontSize: 22, color: COLORS.gold },
+  headerTitle: { fontSize: 24, fontFamily: 'Cinzel_900Black', color: COLORS.silverBright, letterSpacing: 4 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   weekNumber: { fontSize: 28, fontWeight: '900', color: COLORS.primary, fontFamily: mono },
   settingsButton: { padding: 4 },

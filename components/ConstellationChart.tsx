@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
+import Svg, { Circle, Line, Defs, RadialGradient, Stop } from 'react-native-svg';
 import { COLORS } from '@/lib/constants';
 
 interface ConstellationChartProps {
@@ -23,17 +24,16 @@ export function ConstellationChart({
     return (
       <View style={[styles.container, { height, width }]}>
         {data.length === 1 && (
-          <View
-            style={{
-              position: 'absolute',
-              left: width / 2 - 4,
-              top: height / 2 - 4,
-              width: 8,
-              height: 8,
-              borderRadius: 4,
-              backgroundColor: color,
-            }}
-          />
+          <Svg width={width} height={height}>
+            <Defs>
+              <RadialGradient id="starGlow" cx="50%" cy="50%" r="50%">
+                <Stop offset="0%" stopColor={color} stopOpacity="0.6" />
+                <Stop offset="100%" stopColor={color} stopOpacity="0" />
+              </RadialGradient>
+            </Defs>
+            <Circle cx={width / 2} cy={height / 2} r={8} fill="url(#starGlow)" />
+            <Circle cx={width / 2} cy={height / 2} r={4} fill={color} opacity={0.9} />
+          </Svg>
         )}
       </View>
     );
@@ -42,7 +42,7 @@ export function ConstellationChart({
   const min = Math.min(...data);
   const max = Math.max(...data);
   const range = max - min || 1;
-  const pad = 8;
+  const pad = 10;
   const cH = height - pad * 2;
   const cW = width - pad * 2;
   const stepX = cW / (data.length - 1);
@@ -52,7 +52,6 @@ export function ConstellationChart({
     y: pad + cH - ((val - min) / range) * cH,
   }));
 
-  // Grid lines (horizontal)
   const gridCount = 3;
   const gridLines = showGrid
     ? Array.from({ length: gridCount }, (_, i) => pad + (cH / (gridCount + 1)) * (i + 1))
@@ -60,87 +59,60 @@ export function ConstellationChart({
 
   return (
     <View style={[styles.container, { height, width }]}>
-      <View style={StyleSheet.absoluteFill}>
-        {/* Subtle grid lines */}
+      <Svg width={width} height={height}>
+        <Defs>
+          <RadialGradient id="dotGlow" cx="50%" cy="50%" r="50%">
+            <Stop offset="0%" stopColor={color} stopOpacity="0.4" />
+            <Stop offset="100%" stopColor={color} stopOpacity="0" />
+          </RadialGradient>
+        </Defs>
+
+        {/* Grid */}
         {gridLines.map((y, i) => (
-          <View
+          <Line
             key={`grid-${i}`}
-            style={{
-              position: 'absolute',
-              left: pad,
-              right: pad,
-              top: y,
-              height: 1,
-              backgroundColor: COLORS.border,
-              opacity: 0.4,
-            }}
+            x1={pad}
+            y1={y}
+            x2={width - pad}
+            y2={y}
+            stroke={COLORS.border}
+            strokeWidth={0.5}
+            opacity={0.4}
           />
         ))}
 
-        {/* Constellation lines */}
+        {/* Lines */}
         {points.map((pt, i) => {
           if (i === 0) return null;
           const prev = points[i - 1];
-          const dx = pt.x - prev.x;
-          const dy = pt.y - prev.y;
-          const len = Math.sqrt(dx * dx + dy * dy);
-          const angle = Math.atan2(dy, dx) * (180 / Math.PI);
           return (
-            <View
+            <Line
               key={`line-${i}`}
-              style={{
-                position: 'absolute',
-                left: prev.x,
-                top: prev.y,
-                width: len,
-                height: 1,
-                backgroundColor: color,
-                opacity: 0.4,
-                transform: [{ rotate: `${angle}deg` }],
-                transformOrigin: 'left center',
-              }}
+              x1={prev.x}
+              y1={prev.y}
+              x2={pt.x}
+              y2={pt.y}
+              stroke={color}
+              strokeWidth={1}
+              opacity={0.35}
             />
           );
         })}
 
-        {/* Star dots */}
+        {/* Star dots with glows */}
         {points.map((pt, i) => {
           const isLast = i === points.length - 1;
           const isFirst = i === 0;
-          const dotSize = isLast ? 8 : isFirst ? 6 : 5;
-          const glowSize = dotSize + 6;
+          const dotR = isLast ? 4 : isFirst ? 3 : 2.5;
+          const glowR = dotR + 6;
           return (
             <React.Fragment key={`star-${i}`}>
-              {/* Outer glow */}
-              <View
-                style={{
-                  position: 'absolute',
-                  left: pt.x - glowSize / 2,
-                  top: pt.y - glowSize / 2,
-                  width: glowSize,
-                  height: glowSize,
-                  borderRadius: glowSize / 2,
-                  backgroundColor: color,
-                  opacity: isLast ? 0.2 : 0.08,
-                }}
-              />
-              {/* Inner dot */}
-              <View
-                style={{
-                  position: 'absolute',
-                  left: pt.x - dotSize / 2,
-                  top: pt.y - dotSize / 2,
-                  width: dotSize,
-                  height: dotSize,
-                  borderRadius: dotSize / 2,
-                  backgroundColor: color,
-                  opacity: isLast ? 1 : 0.7,
-                }}
-              />
+              <Circle cx={pt.x} cy={pt.y} r={glowR} fill="url(#dotGlow)" opacity={isLast ? 0.5 : 0.2} />
+              <Circle cx={pt.x} cy={pt.y} r={dotR} fill={color} opacity={isLast ? 1 : 0.7} />
             </React.Fragment>
           );
         })}
-      </View>
+      </Svg>
     </View>
   );
 }

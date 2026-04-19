@@ -1,8 +1,15 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Platform } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, Text, StyleSheet, Platform } from 'react-native';
+import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
+import Animated, {
+  useSharedValue,
+  useAnimatedProps,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
 import { COLORS } from '@/lib/constants';
 
-const mono = Platform.select({ ios: 'Menlo', default: 'monospace' });
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 interface RadialGaugeProps {
   progress: number;
@@ -19,115 +26,86 @@ export function RadialGauge({
   label,
   trackColor = COLORS.border,
 }: RadialGaugeProps) {
-  const animProgress = useRef(new Animated.Value(0)).current;
   const clamped = Math.max(0, Math.min(1, progress));
   const pct = Math.round(clamped * 100);
 
+  const strokeWidth = Math.max(6, Math.round(size / 12));
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const center = size / 2;
+
+  const animProgress = useSharedValue(0);
+
   useEffect(() => {
-    Animated.timing(animProgress, {
-      toValue: clamped,
-      duration: 700,
-      useNativeDriver: false,
-    }).start();
+    animProgress.value = withTiming(clamped, {
+      duration: 900,
+      easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+    });
   }, [clamped]);
 
-  const strokeWidth = Math.max(4, Math.round(size / 15));
-  const radius = (size - strokeWidth) / 2;
-  const halfSize = size / 2;
-
-  // We render a semi-circle using border tricks
-  // The gauge is a half-circle (180 degrees)
-  // We use two overlapping quarter-circle segments
-
-  // For a semi-circular gauge we split into left-quarter and right-quarter
-  // Progress 0..0.5 fills the right quarter, 0.5..1 fills the left quarter
-  const rightFill = Math.min(clamped * 2, 1); // 0-1 for right quadrant
-  const leftFill = Math.max(0, (clamped - 0.5) * 2); // 0-1 for left quadrant
+  const animatedProps = useAnimatedProps(() => ({
+    strokeDashoffset: circumference * (1 - animProgress.value),
+  }));
 
   return (
-    <View style={[styles.container, { width: size, height: halfSize + 8 }]}>
-      {/* Track - semi circle */}
-      <View style={[styles.semiTrack, { width: size, height: halfSize, borderTopLeftRadius: radius + strokeWidth / 2, borderTopRightRadius: radius + strokeWidth / 2 }]}>
-        <View
-          style={{
-            width: size,
-            height: halfSize,
-            borderTopLeftRadius: radius + strokeWidth / 2,
-            borderTopRightRadius: radius + strokeWidth / 2,
-            borderWidth: strokeWidth,
-            borderBottomWidth: 0,
-            borderColor: trackColor,
-          }}
-        />
-      </View>
+    <View style={[styles.container, { width: size, height: size }]}>
+      <Svg width={size} height={size}>
+        <Defs>
+          <LinearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <Stop offset="0%" stopColor={color} stopOpacity="1" />
+            <Stop offset="100%" stopColor={COLORS.gold} stopOpacity="0.8" />
+          </LinearGradient>
+        </Defs>
 
-      {/* Fill - right half (0-90 degrees from right) */}
-      <View style={[styles.fillWrap, { width: halfSize, height: halfSize, right: 0, overflow: 'hidden' }]}>
-        <Animated.View
-          style={{
-            position: 'absolute',
-            left: 0,
-            bottom: 0,
-            width: halfSize,
-            height: halfSize,
-            borderTopRightRadius: radius + strokeWidth / 2,
-            borderWidth: strokeWidth,
-            borderBottomWidth: 0,
-            borderLeftWidth: 0,
-            borderColor: color,
-            opacity: animProgress.interpolate({
-              inputRange: [0, 0.01, 1],
-              outputRange: [0, 1, 1],
-            }),
-            transform: [
-              {
-                rotate: animProgress.interpolate({
-                  inputRange: [0, 0.5, 1],
-                  outputRange: ['90deg', '0deg', '0deg'],
-                }),
-              },
-            ],
-            transformOrigin: 'left bottom',
-          }}
+        {/* Track */}
+        <Circle
+          cx={center}
+          cy={center}
+          r={radius}
+          stroke={trackColor}
+          strokeWidth={strokeWidth}
+          fill="none"
+          opacity={0.4}
         />
-      </View>
 
-      {/* Fill - left half (90-180 degrees from right) */}
-      <View style={[styles.fillWrap, { width: halfSize, height: halfSize, left: 0, overflow: 'hidden' }]}>
-        <Animated.View
-          style={{
-            position: 'absolute',
-            right: 0,
-            bottom: 0,
-            width: halfSize,
-            height: halfSize,
-            borderTopLeftRadius: radius + strokeWidth / 2,
-            borderWidth: strokeWidth,
-            borderBottomWidth: 0,
-            borderRightWidth: 0,
-            borderColor: color,
-            opacity: animProgress.interpolate({
-              inputRange: [0, 0.5, 0.51, 1],
-              outputRange: [0, 0, 1, 1],
-            }),
-            transform: [
-              {
-                rotate: animProgress.interpolate({
-                  inputRange: [0, 0.5, 1],
-                  outputRange: ['-90deg', '-90deg', '0deg'],
-                }),
-              },
-            ],
-            transformOrigin: 'right bottom',
-          }}
+        {/* Glow layer */}
+        <AnimatedCircle
+          cx={center}
+          cy={center}
+          r={radius}
+          stroke={color}
+          strokeWidth={strokeWidth + 4}
+          fill="none"
+          opacity={0.1}
+          strokeDasharray={circumference}
+          animatedProps={animatedProps}
+          strokeLinecap="round"
+          rotation={-90}
+          origin={`${center}, ${center}`}
         />
-      </View>
 
-      {/* Center text */}
-      <View style={[styles.centerText, { bottom: 0, width: size }]}>
-        <Text style={[styles.pctText, { fontSize: Math.round(size / 4), color }]}>{pct}%</Text>
+        {/* Fill */}
+        <AnimatedCircle
+          cx={center}
+          cy={center}
+          r={radius}
+          stroke="url(#gaugeGrad)"
+          strokeWidth={strokeWidth}
+          fill="none"
+          strokeDasharray={circumference}
+          animatedProps={animatedProps}
+          strokeLinecap="round"
+          rotation={-90}
+          origin={`${center}, ${center}`}
+        />
+      </Svg>
+
+      <View style={[styles.centerText, { width: size, height: size }]}>
+        <Text style={[styles.pctText, { fontSize: Math.round(size / 4.5), color }]}>
+          {pct}%
+        </Text>
         {label && (
-          <Text style={[styles.labelText, { fontSize: Math.max(8, Math.round(size / 12)) }]}>
+          <Text style={[styles.labelText, { fontSize: Math.max(8, Math.round(size / 14)) }]}>
             {label}
           </Text>
         )}
@@ -136,19 +114,12 @@ export function RadialGauge({
   );
 }
 
+const mono = Platform.select({ ios: 'Menlo', default: 'monospace' });
+
 const styles = StyleSheet.create({
   container: {
-    position: 'relative',
     alignItems: 'center',
-  },
-  semiTrack: {
-    position: 'absolute',
-    top: 0,
-    overflow: 'hidden',
-  },
-  fillWrap: {
-    position: 'absolute',
-    top: 0,
+    justifyContent: 'center',
   },
   centerText: {
     position: 'absolute',
