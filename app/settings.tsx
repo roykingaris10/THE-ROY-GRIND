@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,9 @@ import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { COLORS } from '@/lib/constants';
 import { useAppData } from '@/hooks/useAppData';
+import { useGamification } from '@/hooks/useGamification';
+import { Card, SectionLabel } from '@/components/Card';
+import { XPBar } from '@/components/XPBar';
 
 const mono = Platform.select({ ios: 'Menlo', default: 'monospace' });
 
@@ -21,60 +24,48 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { data, loading, updateSettings, updateProfile, resetAllData } = useAppData();
+  const gam = useGamification(data);
 
-  const [age, setAge] = useState('');
-  const [sex, setSex] = useState<'male' | 'female'>('male');
-  const [height, setHeight] = useState('');
-  const [programStart, setProgramStart] = useState('');
-  const [showStretch, setShowStretch] = useState(false);
-  const [ebikeDefault, setEbikeDefault] = useState('');
-  const [autoSyncSteps, setAutoSyncSteps] = useState(false);
-  const [reminderEnabled, setReminderEnabled] = useState(true);
-  const [reminderTime, setReminderTime] = useState('21:00');
+  const [age, setAge] = useState(String(data?.profile.age ?? 24));
+  const [height, setHeight] = useState(String(data?.profile.heightCm ?? 180));
+  const [sex, setSex] = useState<'male' | 'female'>(data?.profile.sex ?? 'male');
+  const [programStart, setProgramStart] = useState(data?.settings.programStart ?? '2026-04-14');
+  const [showStretch, setShowStretch] = useState(data?.settings.showStretchTargets ?? false);
+  const [autoSteps, setAutoSteps] = useState(data?.settings.autoSyncSteps ?? false);
+  const [defaultEbike, setDefaultEbike] = useState(String(data?.settings.defaultEbikeMinutesPerDay ?? 20));
+  const [reminderEnabled, setReminderEnabled] = useState(data?.settings.reminderEnabled ?? true);
+  const [reminderTime, setReminderTime] = useState(data?.settings.reminderTime ?? '21:00');
 
-  useEffect(() => {
-    if (!data) return;
-    setAge(String(data.profile.age));
-    setSex(data.profile.sex);
-    setHeight(String(data.profile.heightCm));
-    setProgramStart(data.settings.programStart);
-    setShowStretch(data.settings.showStretchTargets);
-    setEbikeDefault(String(data.settings.defaultEbikeMinutesPerDay));
-    setAutoSyncSteps(data.settings.autoSyncSteps);
-    setReminderEnabled(data.settings.reminderEnabled);
-    setReminderTime(data.settings.reminderTime);
-  }, [data]);
+  const saveProfile = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    await updateProfile({ age: parseInt(age), sex, heightCm: parseInt(height) });
+    Alert.alert('Saved', 'Profile updated.');
+  };
 
-  const handleSave = async () => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    await updateProfile({
-      age: parseInt(age) || 24,
-      sex,
-      heightCm: parseInt(height) || 180,
-    });
+  const saveSettings = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     await updateSettings({
       programStart,
       showStretchTargets: showStretch,
-      defaultEbikeMinutesPerDay: parseInt(ebikeDefault) || 20,
-      autoSyncSteps,
+      autoSyncSteps: autoSteps,
+      defaultEbikeMinutesPerDay: parseInt(defaultEbike) || 20,
       reminderEnabled,
       reminderTime,
     });
-    router.back();
+    Alert.alert('Saved', 'Settings updated.');
   };
 
   const handleReset = () => {
     Alert.alert(
       'Reset All Data?',
-      'This will permanently delete all logged data including sets, entries, and sessions. This cannot be undone.',
+      'This will erase everything and restart from onboarding. This cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'RESET',
+          text: 'Reset',
           style: 'destructive',
           onPress: async () => {
             await resetAllData();
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
             router.replace('/onboarding');
           },
         },
@@ -85,120 +76,131 @@ export default function SettingsScreen() {
   if (loading || !data) return null;
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + 10, paddingBottom: insets.bottom + 20 }]}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.backText}>CLOSE</Text>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <View style={styles.topBar}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn}>
+          <Text style={styles.closeText}>{'\u2715'}</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>SETTINGS</Text>
-        <TouchableOpacity onPress={handleSave}>
-          <Text style={styles.saveText}>SAVE</Text>
-        </TouchableOpacity>
+        <Text style={styles.title}>{'\u2626'} SETTINGS</Text>
+        <View style={{ width: 36 }} />
       </View>
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        {/* Profile */}
-        <Text style={styles.section}>PROFILE</Text>
-        <View style={styles.row}>
-          <View style={styles.halfInput}>
-            <Text style={styles.label}>AGE</Text>
-            <TextInput style={styles.input} value={age} onChangeText={setAge} keyboardType="number-pad" placeholderTextColor={COLORS.textMuted} />
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Card>
+          <XPBar xp={gam.xp} level={gam.level} progress={gam.levelProgress} xpToNext={gam.xpToNext} />
+        </Card>
+
+        <SectionLabel>PROFILE</SectionLabel>
+        <Card>
+          <InputRow label="AGE" value={age} onChange={setAge} kbd="number-pad" />
+          <Text style={styles.fieldLabel}>SEX</Text>
+          <View style={styles.pillRow}>
+            <Pill label="MALE" active={sex === 'male'} onPress={() => setSex('male')} />
+            <Pill label="FEMALE" active={sex === 'female'} onPress={() => setSex('female')} />
           </View>
-          <View style={styles.halfInput}>
-            <Text style={styles.label}>HEIGHT (CM)</Text>
-            <TextInput style={styles.input} value={height} onChangeText={setHeight} keyboardType="number-pad" placeholderTextColor={COLORS.textMuted} />
+          <InputRow label="HEIGHT (CM)" value={height} onChange={setHeight} kbd="number-pad" />
+          <TouchableOpacity style={styles.saveBtn} onPress={saveProfile}>
+            <Text style={styles.saveBtnText}>SAVE PROFILE</Text>
+          </TouchableOpacity>
+        </Card>
+
+        <SectionLabel>PROGRAM</SectionLabel>
+        <Card>
+          <InputRow label="START DATE (YYYY-MM-DD)" value={programStart} onChange={setProgramStart} />
+          <Text style={styles.fieldLabel}>TARGET MODE</Text>
+          <View style={styles.pillRow}>
+            <Pill label="REALISTIC" active={!showStretch} onPress={() => setShowStretch(false)} />
+            <Pill label="STRETCH" active={showStretch} onPress={() => setShowStretch(true)} />
           </View>
-        </View>
-        <Text style={styles.label}>SEX</Text>
-        <View style={styles.pillRow}>
-          <TouchableOpacity onPress={() => setSex('male')} style={[styles.pill, sex === 'male' && styles.pillActive]}>
-            <Text style={[styles.pillText, sex === 'male' && styles.pillTextActive]}>MALE</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => setSex('female')} style={[styles.pill, sex === 'female' && styles.pillActive]}>
-            <Text style={[styles.pillText, sex === 'female' && styles.pillTextActive]}>FEMALE</Text>
-          </TouchableOpacity>
-        </View>
+        </Card>
 
-        {/* Program */}
-        <Text style={styles.section}>PROGRAM</Text>
-        <Text style={styles.label}>START DATE</Text>
-        <TextInput style={styles.input} value={programStart} onChangeText={setProgramStart} placeholderTextColor={COLORS.textMuted} />
+        <SectionLabel>ACTIVITY</SectionLabel>
+        <Card>
+          <Text style={styles.fieldLabel}>AUTO-SYNC STEPS</Text>
+          <View style={styles.pillRow}>
+            <Pill label="ON" active={autoSteps} onPress={() => setAutoSteps(true)} />
+            <Pill label="OFF" active={!autoSteps} onPress={() => setAutoSteps(false)} />
+          </View>
+          <InputRow label="DEFAULT E-BIKE MIN/DAY" value={defaultEbike} onChange={setDefaultEbike} kbd="number-pad" />
+        </Card>
 
-        <Text style={styles.label}>TARGET MODE</Text>
-        <View style={styles.pillRow}>
-          <TouchableOpacity onPress={() => setShowStretch(false)} style={[styles.pill, !showStretch && styles.pillActive]}>
-            <Text style={[styles.pillText, !showStretch && styles.pillTextActive]}>REALISTIC</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => setShowStretch(true)} style={[styles.pill, showStretch && styles.pillActive]}>
-            <Text style={[styles.pillText, showStretch && styles.pillTextActive]}>STRETCH</Text>
-          </TouchableOpacity>
-        </View>
+        <SectionLabel>REMINDERS</SectionLabel>
+        <Card>
+          <Text style={styles.fieldLabel}>DAILY REMINDER</Text>
+          <View style={styles.pillRow}>
+            <Pill label="ON" active={reminderEnabled} onPress={() => setReminderEnabled(true)} />
+            <Pill label="OFF" active={!reminderEnabled} onPress={() => setReminderEnabled(false)} />
+          </View>
+          {reminderEnabled && <InputRow label="TIME (HH:MM)" value={reminderTime} onChange={setReminderTime} />}
+        </Card>
 
-        {/* Activity */}
-        <Text style={styles.section}>ACTIVITY</Text>
-        <Text style={styles.label}>DEFAULT E-BIKE MIN/DAY</Text>
-        <TextInput style={styles.input} value={ebikeDefault} onChangeText={setEbikeDefault} keyboardType="number-pad" placeholderTextColor={COLORS.textMuted} />
+        <TouchableOpacity style={styles.saveBtn} onPress={saveSettings}>
+          <Text style={styles.saveBtnText}>SAVE SETTINGS</Text>
+        </TouchableOpacity>
 
-        <Text style={styles.label}>AUTO-SYNC STEPS</Text>
-        <View style={styles.pillRow}>
-          <TouchableOpacity onPress={() => setAutoSyncSteps(true)} style={[styles.pill, autoSyncSteps && styles.pillActive]}>
-            <Text style={[styles.pillText, autoSyncSteps && styles.pillTextActive]}>ON</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => setAutoSyncSteps(false)} style={[styles.pill, !autoSyncSteps && styles.pillActive]}>
-            <Text style={[styles.pillText, !autoSyncSteps && styles.pillTextActive]}>OFF</Text>
-          </TouchableOpacity>
-        </View>
+        <View style={{ height: 24 }} />
 
-        {/* Reminders */}
-        <Text style={styles.section}>REMINDERS</Text>
-        <Text style={styles.label}>DAILY LOG REMINDER</Text>
-        <View style={styles.pillRow}>
-          <TouchableOpacity onPress={() => setReminderEnabled(true)} style={[styles.pill, reminderEnabled && styles.pillActive]}>
-            <Text style={[styles.pillText, reminderEnabled && styles.pillTextActive]}>ON</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => setReminderEnabled(false)} style={[styles.pill, !reminderEnabled && styles.pillActive]}>
-            <Text style={[styles.pillText, !reminderEnabled && styles.pillTextActive]}>OFF</Text>
-          </TouchableOpacity>
-        </View>
-        {reminderEnabled && (
-          <>
-            <Text style={styles.label}>TIME (HH:MM)</Text>
-            <TextInput style={styles.input} value={reminderTime} onChangeText={setReminderTime} placeholderTextColor={COLORS.textMuted} />
-          </>
-        )}
+        <TouchableOpacity style={styles.dangerBtn} onPress={handleReset}>
+          <Text style={styles.dangerText}>RESET ALL DATA</Text>
+        </TouchableOpacity>
 
-        {/* Reset */}
-        <View style={styles.dangerZone}>
-          <Text style={styles.dangerTitle}>DANGER ZONE</Text>
-          <TouchableOpacity onPress={handleReset} style={styles.resetBtn}>
-            <Text style={styles.resetBtnText}>RESET ALL DATA</Text>
-          </TouchableOpacity>
-        </View>
+        <Text style={styles.footer}>{'\u2626'} ROYFORGE {'\u2626'}</Text>
+        <Text style={styles.footerSub}>Glorify God in your body</Text>
       </ScrollView>
     </View>
   );
 }
 
+function InputRow({ label, value, onChange, kbd }: { label: string; value: string; onChange: (v: string) => void; kbd?: any }) {
+  return (
+    <View style={styles.inputGroup}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      <TextInput
+        style={styles.input}
+        value={value}
+        onChangeText={onChange}
+        keyboardType={kbd || 'default'}
+        placeholderTextColor={COLORS.textMuted}
+      />
+    </View>
+  );
+}
+
+function Pill({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      style={[styles.pill, active && styles.pillActive]}
+    >
+      <Text style={[styles.pillText, active && styles.pillTextActive]}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  backText: { fontSize: 12, color: COLORS.textSecondary, fontFamily: mono, fontWeight: '700', letterSpacing: 1 },
+  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  closeBtn: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: COLORS.ghostBorder, alignItems: 'center', justifyContent: 'center' },
+  closeText: { fontSize: 16, color: COLORS.textPrimary, fontFamily: mono },
   title: { fontSize: 16, fontWeight: '900', color: COLORS.textPrimary, fontFamily: mono, letterSpacing: 2 },
-  saveText: { fontSize: 12, color: COLORS.primary, fontFamily: mono, fontWeight: '900', letterSpacing: 1 },
   scroll: { flex: 1 },
-  scrollContent: { padding: 16 },
-  section: { fontSize: 10, color: COLORS.primary, fontFamily: mono, letterSpacing: 2, fontWeight: '900', marginTop: 24, marginBottom: 12 },
-  label: { fontSize: 10, color: COLORS.label, fontFamily: mono, letterSpacing: 1.5, fontWeight: '700', marginBottom: 8 },
-  input: { backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.border, borderRadius: 8, padding: 14, fontSize: 16, color: COLORS.textPrimary, fontFamily: mono, marginBottom: 16 },
-  row: { flexDirection: 'row', gap: 12, marginBottom: 4 },
-  halfInput: { flex: 1 },
+  content: { paddingHorizontal: 16, paddingTop: 12 },
+  inputGroup: { marginBottom: 16 },
+  fieldLabel: { fontSize: 10, color: COLORS.label, fontFamily: mono, letterSpacing: 1.5, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase' },
+  input: { backgroundColor: COLORS.background, borderWidth: 1, borderColor: COLORS.border, borderRadius: 8, padding: 12, fontSize: 16, color: COLORS.textPrimary, fontFamily: mono },
   pillRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
-  pill: { flex: 1, borderWidth: 1, borderColor: COLORS.ghostBorder, borderRadius: 8, paddingVertical: 12, alignItems: 'center' },
+  pill: { flex: 1, borderWidth: 1, borderColor: COLORS.ghostBorder, borderRadius: 8, paddingVertical: 10, alignItems: 'center' },
   pillActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  pillText: { fontSize: 12, fontWeight: '700', color: COLORS.textSecondary, fontFamily: mono, letterSpacing: 1 },
-  pillTextActive: { color: '#fff' },
-  dangerZone: { marginTop: 40, borderTopWidth: 1, borderTopColor: COLORS.danger, paddingTop: 20, marginBottom: 40 },
-  dangerTitle: { fontSize: 10, color: COLORS.danger, fontFamily: mono, letterSpacing: 2, fontWeight: '900', marginBottom: 16 },
-  resetBtn: { borderWidth: 1, borderColor: COLORS.danger, borderRadius: 8, paddingVertical: 14, alignItems: 'center' },
-  resetBtnText: { fontSize: 12, fontWeight: '900', color: COLORS.danger, fontFamily: mono, letterSpacing: 2 },
+  pillText: { fontSize: 11, fontWeight: '700', color: COLORS.textSecondary, fontFamily: mono, letterSpacing: 1 },
+  pillTextActive: { color: '#000' },
+  saveBtn: { backgroundColor: COLORS.primary, borderRadius: 8, paddingVertical: 14, alignItems: 'center', marginTop: 8 },
+  saveBtnText: { fontSize: 13, fontWeight: '900', color: '#000', fontFamily: mono, letterSpacing: 2 },
+  dangerBtn: { borderWidth: 1, borderColor: COLORS.danger, borderRadius: 8, paddingVertical: 14, alignItems: 'center' },
+  dangerText: { fontSize: 12, fontWeight: '700', color: COLORS.danger, fontFamily: mono, letterSpacing: 1 },
+  footer: { fontSize: 12, color: COLORS.primary, fontFamily: mono, textAlign: 'center', marginTop: 32, fontWeight: '700', letterSpacing: 2 },
+  footerSub: { fontSize: 9, color: COLORS.textMuted, fontFamily: mono, textAlign: 'center', marginTop: 4, fontStyle: 'italic' },
 });

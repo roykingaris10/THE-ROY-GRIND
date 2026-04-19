@@ -17,7 +17,9 @@ import { COLORS, PROGRAM_START_DEFAULT, BENCHMARKS_REALISTIC } from '@/lib/const
 import { useAppData } from '@/hooks/useAppData';
 import { useCurrentProgram } from '@/hooks/useCurrentProgram';
 import { useCalorieBalance } from '@/hooks/useCalorieBalance';
+import { useGamification } from '@/hooks/useGamification';
 import { getDateString, getBestE1RM, formatNumber } from '@/lib/helpers';
+import { getDailyVerse, getOrthodoxGreeting, getFastingInfo } from '@/lib/orthodoxCalendar';
 import { detectRedFlags } from '@/lib/redflags';
 import type { LiftType } from '@/types';
 
@@ -26,6 +28,9 @@ import { MiniChart } from '@/components/MiniChart';
 import { ProgressBar } from '@/components/ProgressBar';
 import { RedFlagAlert } from '@/components/RedFlagAlert';
 import { CalorieBalanceCard } from '@/components/CalorieBalanceCard';
+import { XPBar } from '@/components/XPBar';
+import { StreakCounter } from '@/components/StreakCounter';
+import { DailyVerse } from '@/components/DailyVerse';
 
 const mono = Platform.select({ ios: 'Menlo', default: 'monospace' });
 
@@ -53,16 +58,20 @@ export default function DashboardScreen() {
     useCurrentProgram(programStart, showStretch);
 
   const calBalance = useCalorieBalance(data);
+  const gam = useGamification(data);
 
   const today = getDateString(new Date());
   const todayEntry = data?.entries[today];
+
+  const verse = useMemo(() => getDailyVerse(), []);
+  const greeting = useMemo(() => getOrthodoxGreeting(), []);
+  const fasting = useMemo(() => getFastingInfo(), []);
 
   const redFlags = useMemo(() => {
     if (!data) return [];
     return detectRedFlags(data);
   }, [data]);
 
-  // Bodyweight data: last 14 entries with weight
   const weightData = useMemo(() => {
     if (!data) return { latest: STARTING_BW, sparkline: [] as number[], target: STARTING_BW };
     const withWeight = Object.values(data.entries)
@@ -73,12 +82,10 @@ export default function DashboardScreen() {
     return { latest, sparkline, target: benchmark.bw };
   }, [data, benchmark]);
 
-  // Lift E1RM data
   const liftData = useMemo(() => {
     if (!data) return LIFT_DEFS.map(l => ({ ...l, best: 0, sparkline: [] as number[], target: 0 }));
     return LIFT_DEFS.map(lift => {
       const best = getBestE1RM(data.sets, lift.key);
-      // Get weekly best e1rm for sparkline (last 8 weeks)
       const weeklyBests: number[] = [];
       for (let w = Math.max(1, week - 7); w <= week; w++) {
         const weekSets = data.sets.filter(s => s.week === w && s.liftType === lift.key && s.isMain);
@@ -102,24 +109,21 @@ export default function DashboardScreen() {
     setRefreshing(false);
   }, [refresh]);
 
-  // -- Loading state (hooks already called above) --
   if (loading) {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.loadingText}>Loading RoyForge...</Text>
+          <Text style={styles.loadingText}>{'\u2626'} Loading RoyForge...</Text>
         </View>
       </View>
     );
   }
 
-  // -- Helper: bodyweight progress (130 -> 100, inverted: losing weight is progress)
   const bwProgress = STARTING_BW > TARGET_BW
     ? Math.max(0, Math.min(1, (STARTING_BW - weightData.latest) / (STARTING_BW - TARGET_BW)))
     : 0;
 
-  // Final benchmark row targets
   const finalBench = BENCHMARKS_REALISTIC[BENCHMARKS_REALISTIC.length - 1];
   const finalTotal = finalBench.sq + finalBench.bn + finalBench.dl;
 
@@ -138,9 +142,10 @@ export default function DashboardScreen() {
           />
         }
       >
-        {/* ===== HEADER ===== */}
+        {/* HEADER */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
+            <Text style={styles.cross}>{'\u2626'}</Text>
             <Text style={styles.headerTitle}>ROYFORGE</Text>
           </View>
           <View style={styles.headerRight}>
@@ -155,7 +160,10 @@ export default function DashboardScreen() {
           </View>
         </View>
 
-        {/* ===== TAGS ROW ===== */}
+        {/* GREETING */}
+        <Text style={styles.greeting}>{greeting}</Text>
+
+        {/* TAGS ROW */}
         <View style={styles.tagsRow}>
           <View style={styles.tag}>
             <Text style={styles.tagText}>{block.name}</Text>
@@ -170,9 +178,29 @@ export default function DashboardScreen() {
               <Text style={[styles.tagText, styles.tagDietBreakText]}>DIET BREAK</Text>
             </View>
           )}
+          {fasting && fasting.type !== 'weekly' && (
+            <View style={[styles.tag, styles.tagFasting]}>
+              <Text style={[styles.tagText, styles.tagFastingText]}>{'\u{1F56F}'} {fasting.name}</Text>
+            </View>
+          )}
         </View>
 
-        {/* ===== RED FLAGS ===== */}
+        {/* XP + STREAK ROW */}
+        <Card delay={0}>
+          <XPBar xp={gam.xp} level={gam.level} progress={gam.levelProgress} xpToNext={gam.xpToNext} />
+          <View style={styles.streakRow}>
+            <StreakCounter current={gam.streak} longest={gam.longestStreak} compact />
+            <View style={styles.achievementCount}>
+              <Text style={styles.achievementIcon}>{'\u{1F3C6}'}</Text>
+              <Text style={styles.achievementText}>{gam.unlockedCount}/{gam.achievements.length}</Text>
+            </View>
+          </View>
+        </Card>
+
+        {/* DAILY VERSE */}
+        <DailyVerse text={verse.text} reference={verse.reference} compact />
+
+        {/* RED FLAGS */}
         {redFlags.length > 0 && (
           <>
             <SectionLabel>Alerts</SectionLabel>
@@ -180,7 +208,7 @@ export default function DashboardScreen() {
           </>
         )}
 
-        {/* ===== CALORIE BALANCE HERO ===== */}
+        {/* CALORIE BALANCE */}
         <SectionLabel>Calorie Balance</SectionLabel>
         <CalorieBalanceCard
           caloriesIn={calBalance.caloriesIn}
@@ -189,7 +217,7 @@ export default function DashboardScreen() {
           status={calBalance.status}
         />
 
-        {/* ===== BODYWEIGHT CARD ===== */}
+        {/* BODYWEIGHT */}
         <SectionLabel>Bodyweight</SectionLabel>
         <Card delay={100}>
           <View style={styles.bwCardRow}>
@@ -198,12 +226,7 @@ export default function DashboardScreen() {
               <Text style={styles.bwUnit}>kg</Text>
             </View>
             <View style={styles.bwCenter}>
-              <MiniChart
-                data={weightData.sparkline}
-                color={COLORS.primary}
-                height={36}
-                width={100}
-              />
+              <MiniChart data={weightData.sparkline} color={COLORS.primary} height={36} width={100} />
             </View>
             <View style={styles.bwRight}>
               <Text style={styles.bwTargetLabel}>TARGET</Text>
@@ -211,56 +234,35 @@ export default function DashboardScreen() {
             </View>
           </View>
           <View style={styles.bwProgressRow}>
-            <ProgressBar
-              progress={bwProgress}
-              color={COLORS.primary}
-              height={5}
-              showLabel
-              label={`${STARTING_BW} → ${TARGET_BW} kg`}
-            />
+            <ProgressBar progress={bwProgress} color={COLORS.primary} height={5} showLabel label={`${STARTING_BW} \u2192 ${TARGET_BW} kg`} />
           </View>
         </Card>
 
-        {/* ===== LIFTS OVERVIEW ===== */}
+        {/* LIFTS OVERVIEW */}
         <SectionLabel>Lifts (Best E1RM)</SectionLabel>
         <Card delay={200}>
           <View style={styles.liftsRow}>
             {liftData.map(lift => (
               <View key={lift.key} style={styles.liftCol}>
                 <Text style={[styles.liftLabel, { color: lift.color }]}>{lift.label}</Text>
-                <Text style={styles.liftValue}>
-                  {lift.best > 0 ? `${lift.best}` : '—'}
-                </Text>
+                <Text style={styles.liftValue}>{lift.best > 0 ? `${lift.best}` : '\u2014'}</Text>
                 <Text style={styles.liftUnit}>kg</Text>
                 <View style={styles.liftChartContainer}>
-                  <MiniChart
-                    data={lift.sparkline}
-                    color={lift.color}
-                    height={30}
-                    width={80}
-                  />
+                  <MiniChart data={lift.sparkline} color={lift.color} height={30} width={80} />
                 </View>
-                <Text style={styles.liftTarget}>
-                  Target: {lift.target}
-                </Text>
-                <ProgressBar
-                  progress={lift.target > 0 ? lift.best / lift.target : 0}
-                  color={lift.color}
-                  height={4}
-                />
+                <Text style={styles.liftTarget}>Target: {lift.target}</Text>
+                <ProgressBar progress={lift.target > 0 ? lift.best / lift.target : 0} color={lift.color} height={4} />
               </View>
             ))}
           </View>
         </Card>
 
-        {/* ===== ESTIMATED TOTAL ===== */}
+        {/* ESTIMATED TOTAL */}
         <SectionLabel>Estimated Total</SectionLabel>
         <Card delay={250}>
           <View style={styles.totalRow}>
             <View>
-              <Text style={styles.totalValue}>
-                {estimatedTotal > 0 ? `${estimatedTotal}` : '—'}
-              </Text>
+              <Text style={styles.totalValue}>{estimatedTotal > 0 ? `${estimatedTotal}` : '\u2014'}</Text>
               <Text style={styles.totalUnit}>kg (SQ + BN + DL)</Text>
             </View>
             <View style={styles.totalTargetCol}>
@@ -269,60 +271,33 @@ export default function DashboardScreen() {
             </View>
           </View>
           <View style={styles.totalProgressRow}>
-            <ProgressBar
-              progress={estimatedTotal > 0 ? estimatedTotal / TARGET_TOTAL : 0}
-              color={COLORS.primary}
-              height={5}
-              showLabel
-              label={`0 → ${TARGET_TOTAL} kg`}
-            />
+            <ProgressBar progress={estimatedTotal > 0 ? estimatedTotal / TARGET_TOTAL : 0} color={COLORS.primary} height={5} showLabel label={`0 \u2192 ${TARGET_TOTAL} kg`} />
           </View>
         </Card>
 
-        {/* ===== TODAY'S SNAPSHOT ===== */}
-        <SectionLabel>Today&apos;s Snapshot</SectionLabel>
+        {/* TODAY'S SNAPSHOT */}
+        <SectionLabel>Today's Snapshot</SectionLabel>
         <Card delay={300}>
           {todayEntry && (todayEntry.weight || todayEntry.calories || todayEntry.steps || todayEntry.sleep) ? (
             <View style={styles.snapshotGrid}>
-              <SnapshotItem
-                icon="balance-scale"
-                label="Weight"
-                value={todayEntry.weight != null ? `${todayEntry.weight.toFixed(1)} kg` : '—'}
-              />
-              <SnapshotItem
-                icon="cutlery"
-                label="Kcal"
-                value={todayEntry.calories != null ? formatNumber(todayEntry.calories) : '—'}
-              />
-              <SnapshotItem
-                icon="road"
-                label="Steps"
-                value={todayEntry.steps != null ? formatNumber(todayEntry.steps) : '—'}
-              />
-              <SnapshotItem
-                icon="moon-o"
-                label="Sleep"
-                value={todayEntry.sleep != null ? `${todayEntry.sleep}h` : '—'}
-              />
+              <SnapshotItem icon="balance-scale" label="Weight" value={todayEntry.weight != null ? `${todayEntry.weight.toFixed(1)} kg` : '\u2014'} />
+              <SnapshotItem icon="cutlery" label="Kcal" value={todayEntry.calories != null ? formatNumber(todayEntry.calories) : '\u2014'} />
+              <SnapshotItem icon="road" label="Steps" value={todayEntry.steps != null ? formatNumber(todayEntry.steps) : '\u2014'} />
+              <SnapshotItem icon="moon-o" label="Sleep" value={todayEntry.sleep != null ? `${todayEntry.sleep}h` : '\u2014'} />
             </View>
           ) : (
-            <TouchableOpacity
-              onPress={() => router.push('/log')}
-              style={styles.noDataContainer}
-            >
+            <TouchableOpacity onPress={() => router.push('/log')} style={styles.noDataContainer}>
               <FontAwesome name="plus-circle" size={18} color={COLORS.primary} />
-              <Text style={styles.noDataText}>No data logged today — tap to log</Text>
+              <Text style={styles.noDataText}>No data logged today {'\u2014'} tap to log</Text>
             </TouchableOpacity>
           )}
         </Card>
 
-        {/* ===== CURRENT BLOCK INFO ===== */}
+        {/* CURRENT BLOCK */}
         <SectionLabel>Current Block</SectionLabel>
         <Card delay={350}>
           <Text style={styles.blockName}>{block.name}</Text>
-          <Text style={styles.blockDetail}>
-            Weeks {block.weeks[0]}–{block.weeks[1]}  ·  {block.focus}
-          </Text>
+          <Text style={styles.blockDetail}>Weeks {block.weeks[0]}{'\u2013'}{block.weeks[1]}  {'\u00B7'}  {block.focus}</Text>
           <View style={styles.blockMetaRow}>
             <BlockMeta label="Squat Freq" value={block.sqFreq} />
             <BlockMeta label="RPE Range" value={block.rpeRange} />
@@ -333,20 +308,17 @@ export default function DashboardScreen() {
               <Text style={styles.nutritionLabel}>Nutrition Phase</Text>
               <Text style={styles.nutritionValue}>{nutritionPhase.name}</Text>
               <Text style={styles.nutritionDetail}>
-                {formatNumber(nutritionPhase.calories[0])}–{formatNumber(nutritionPhase.calories[1])} kcal  ·  {nutritionPhase.protein[0]}–{nutritionPhase.protein[1]}g protein
+                {formatNumber(nutritionPhase.calories[0])}{'\u2013'}{formatNumber(nutritionPhase.calories[1])} kcal  {'\u00B7'}  {nutritionPhase.protein[0]}{'\u2013'}{nutritionPhase.protein[1]}g protein
               </Text>
             </View>
           )}
         </Card>
 
-        {/* Bottom spacer */}
         <View style={{ height: insets.bottom + 24 }} />
       </ScrollView>
     </View>
   );
 }
-
-// ===== Sub-components =====
 
 function SnapshotItem({ icon, label, value }: { icon: string; label: string; value: string }) {
   return (
@@ -367,339 +339,79 @@ function BlockMeta({ label, value }: { label: string; value: string }) {
   );
 }
 
-// ===== Styles =====
-
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 16,
-  },
+  container: { flex: 1, backgroundColor: COLORS.background },
+  scroll: { flex: 1 },
+  scrollContent: { paddingHorizontal: 16 },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 16 },
+  loadingText: { fontSize: 13, color: COLORS.textSecondary, fontFamily: mono, letterSpacing: 1 },
 
-  // Loading
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 16,
-  },
-  loadingText: {
-    fontSize: 13,
-    color: COLORS.textSecondary,
-    fontFamily: mono,
-    letterSpacing: 1,
-  },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12, paddingBottom: 4 },
+  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  cross: { fontSize: 22, color: COLORS.primary },
+  headerTitle: { fontSize: 22, fontWeight: '900', color: COLORS.textPrimary, fontFamily: mono, letterSpacing: 2 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  weekNumber: { fontSize: 28, fontWeight: '900', color: COLORS.primary, fontFamily: mono },
+  settingsButton: { padding: 4 },
 
-  // Header
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 12,
-    paddingBottom: 8,
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: '900',
-    color: COLORS.textPrimary,
-    fontFamily: mono,
-    letterSpacing: 2,
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-  },
-  weekNumber: {
-    fontSize: 28,
-    fontWeight: '900',
-    color: COLORS.primary,
-    fontFamily: mono,
-  },
-  settingsButton: {
-    padding: 4,
-  },
+  greeting: { fontSize: 11, color: COLORS.textMuted, fontFamily: mono, fontStyle: 'italic', marginBottom: 12 },
 
-  // Tags
-  tagsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 16,
-  },
-  tag: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: COLORS.ghostBorder,
-    backgroundColor: COLORS.card,
-  },
-  tagText: {
-    fontSize: 10,
-    fontFamily: mono,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    color: COLORS.textSecondary,
-  },
-  tagDeload: {
-    borderColor: COLORS.primary,
-    backgroundColor: 'rgba(255, 107, 26, 0.1)',
-  },
-  tagDeloadText: {
-    color: COLORS.primary,
-    fontWeight: '700',
-  },
-  tagDietBreak: {
-    borderColor: COLORS.success,
-    backgroundColor: 'rgba(68, 255, 136, 0.1)',
-  },
-  tagDietBreakText: {
-    color: COLORS.success,
-    fontWeight: '700',
-  },
+  tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
+  tag: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: COLORS.ghostBorder, backgroundColor: COLORS.card },
+  tagText: { fontSize: 10, fontFamily: mono, letterSpacing: 1, textTransform: 'uppercase', color: COLORS.textSecondary },
+  tagDeload: { borderColor: COLORS.primary, backgroundColor: 'rgba(212,175,55,0.1)' },
+  tagDeloadText: { color: COLORS.primary, fontWeight: '700' },
+  tagDietBreak: { borderColor: COLORS.success, backgroundColor: 'rgba(68,187,136,0.1)' },
+  tagDietBreakText: { color: COLORS.success, fontWeight: '700' },
+  tagFasting: { borderColor: COLORS.secondary, backgroundColor: 'rgba(139,26,26,0.1)' },
+  tagFastingText: { color: '#AA4444', fontWeight: '700' },
 
-  // Bodyweight card
-  bwCardRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  bwLeft: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 4,
-  },
-  bwLatest: {
-    fontSize: 28,
-    fontWeight: '900',
-    color: COLORS.textPrimary,
-    fontFamily: mono,
-  },
-  bwUnit: {
-    fontSize: 12,
-    color: COLORS.textMuted,
-    fontFamily: mono,
-  },
-  bwCenter: {
-    alignItems: 'center',
-  },
-  bwRight: {
-    alignItems: 'flex-end',
-  },
-  bwTargetLabel: {
-    fontSize: 9,
-    color: COLORS.label,
-    fontFamily: mono,
-    letterSpacing: 1.5,
-    textTransform: 'uppercase',
-    marginBottom: 2,
-  },
-  bwTargetValue: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: COLORS.textSecondary,
-    fontFamily: mono,
-  },
-  bwProgressRow: {
-    marginTop: 4,
-  },
+  streakRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: COLORS.border },
+  achievementCount: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  achievementIcon: { fontSize: 16 },
+  achievementText: { fontSize: 13, fontWeight: '700', color: COLORS.textPrimary, fontFamily: mono },
 
-  // Lifts overview
-  liftsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  liftCol: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  liftLabel: {
-    fontSize: 11,
-    fontWeight: '900',
-    fontFamily: mono,
-    letterSpacing: 1.5,
-    marginBottom: 4,
-  },
-  liftValue: {
-    fontSize: 22,
-    fontWeight: '900',
-    color: COLORS.textPrimary,
-    fontFamily: mono,
-  },
-  liftUnit: {
-    fontSize: 9,
-    color: COLORS.textMuted,
-    fontFamily: mono,
-    marginBottom: 4,
-  },
-  liftChartContainer: {
-    marginVertical: 4,
-  },
-  liftTarget: {
-    fontSize: 9,
-    color: COLORS.textMuted,
-    fontFamily: mono,
-    marginBottom: 6,
-    marginTop: 2,
-  },
+  bwCardRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+  bwLeft: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
+  bwLatest: { fontSize: 28, fontWeight: '900', color: COLORS.textPrimary, fontFamily: mono },
+  bwUnit: { fontSize: 12, color: COLORS.textMuted, fontFamily: mono },
+  bwCenter: { alignItems: 'center' },
+  bwRight: { alignItems: 'flex-end' },
+  bwTargetLabel: { fontSize: 9, color: COLORS.label, fontFamily: mono, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 2 },
+  bwTargetValue: { fontSize: 14, fontWeight: '700', color: COLORS.textSecondary, fontFamily: mono },
+  bwProgressRow: { marginTop: 4 },
 
-  // Estimated total
-  totalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  totalValue: {
-    fontSize: 30,
-    fontWeight: '900',
-    color: COLORS.textPrimary,
-    fontFamily: mono,
-  },
-  totalUnit: {
-    fontSize: 10,
-    color: COLORS.textMuted,
-    fontFamily: mono,
-    marginTop: 2,
-  },
-  totalTargetCol: {
-    alignItems: 'flex-end',
-  },
-  totalTargetLabel: {
-    fontSize: 9,
-    color: COLORS.label,
-    fontFamily: mono,
-    letterSpacing: 1.5,
-    textTransform: 'uppercase',
-    marginBottom: 2,
-  },
-  totalTargetValue: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: COLORS.textSecondary,
-    fontFamily: mono,
-  },
-  totalProgressRow: {
-    marginTop: 4,
-  },
+  liftsRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 },
+  liftCol: { flex: 1, alignItems: 'center' },
+  liftLabel: { fontSize: 11, fontWeight: '900', fontFamily: mono, letterSpacing: 1.5, marginBottom: 4 },
+  liftValue: { fontSize: 22, fontWeight: '900', color: COLORS.textPrimary, fontFamily: mono },
+  liftUnit: { fontSize: 9, color: COLORS.textMuted, fontFamily: mono, marginBottom: 4 },
+  liftChartContainer: { marginVertical: 4 },
+  liftTarget: { fontSize: 9, color: COLORS.textMuted, fontFamily: mono, marginBottom: 6, marginTop: 2 },
 
-  // Today's snapshot
-  snapshotGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  snapshotItem: {
-    flex: 1,
-    minWidth: '40%',
-    alignItems: 'center',
-    paddingVertical: 10,
-    gap: 4,
-  },
-  snapshotLabel: {
-    fontSize: 9,
-    color: COLORS.label,
-    fontFamily: mono,
-    letterSpacing: 1.5,
-    textTransform: 'uppercase',
-  },
-  snapshotValue: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-    fontFamily: mono,
-  },
-  noDataContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    paddingVertical: 12,
-  },
-  noDataText: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-    fontFamily: mono,
-  },
+  totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  totalValue: { fontSize: 30, fontWeight: '900', color: COLORS.textPrimary, fontFamily: mono },
+  totalUnit: { fontSize: 10, color: COLORS.textMuted, fontFamily: mono, marginTop: 2 },
+  totalTargetCol: { alignItems: 'flex-end' },
+  totalTargetLabel: { fontSize: 9, color: COLORS.label, fontFamily: mono, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 2 },
+  totalTargetValue: { fontSize: 18, fontWeight: '700', color: COLORS.textSecondary, fontFamily: mono },
+  totalProgressRow: { marginTop: 4 },
 
-  // Current block
-  blockName: {
-    fontSize: 16,
-    fontWeight: '900',
-    color: COLORS.primary,
-    fontFamily: mono,
-    marginBottom: 4,
-  },
-  blockDetail: {
-    fontSize: 11,
-    color: COLORS.textSecondary,
-    fontFamily: mono,
-    marginBottom: 12,
-    lineHeight: 18,
-  },
-  blockMetaRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  blockMetaItem: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 8,
-    backgroundColor: COLORS.background,
-    borderRadius: 8,
-  },
-  blockMetaLabel: {
-    fontSize: 8,
-    color: COLORS.label,
-    fontFamily: mono,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    marginBottom: 4,
-  },
-  blockMetaValue: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-    fontFamily: mono,
-  },
-  nutritionRow: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-  },
-  nutritionLabel: {
-    fontSize: 9,
-    color: COLORS.label,
-    fontFamily: mono,
-    letterSpacing: 1.5,
-    textTransform: 'uppercase',
-    marginBottom: 4,
-  },
-  nutritionValue: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: COLORS.success,
-    fontFamily: mono,
-    marginBottom: 2,
-  },
-  nutritionDetail: {
-    fontSize: 10,
-    color: COLORS.textMuted,
-    fontFamily: mono,
-    lineHeight: 16,
-  },
+  snapshotGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  snapshotItem: { flex: 1, minWidth: '40%', alignItems: 'center', paddingVertical: 10, gap: 4 },
+  snapshotLabel: { fontSize: 9, color: COLORS.label, fontFamily: mono, letterSpacing: 1.5, textTransform: 'uppercase' },
+  snapshotValue: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary, fontFamily: mono },
+  noDataContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 12 },
+  noDataText: { fontSize: 12, color: COLORS.textSecondary, fontFamily: mono },
+
+  blockName: { fontSize: 16, fontWeight: '900', color: COLORS.primary, fontFamily: mono, marginBottom: 4 },
+  blockDetail: { fontSize: 11, color: COLORS.textSecondary, fontFamily: mono, marginBottom: 12, lineHeight: 18 },
+  blockMetaRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 },
+  blockMetaItem: { flex: 1, alignItems: 'center', paddingVertical: 8, backgroundColor: COLORS.background, borderRadius: 8 },
+  blockMetaLabel: { fontSize: 8, color: COLORS.label, fontFamily: mono, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 },
+  blockMetaValue: { fontSize: 12, fontWeight: '700', color: COLORS.textPrimary, fontFamily: mono },
+  nutritionRow: { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: COLORS.border },
+  nutritionLabel: { fontSize: 9, color: COLORS.label, fontFamily: mono, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 4 },
+  nutritionValue: { fontSize: 14, fontWeight: '700', color: COLORS.success, fontFamily: mono, marginBottom: 2 },
+  nutritionDetail: { fontSize: 10, color: COLORS.textMuted, fontFamily: mono, lineHeight: 16 },
 });

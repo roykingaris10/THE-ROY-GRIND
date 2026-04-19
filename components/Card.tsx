@@ -29,7 +29,7 @@ export function Card({ children, style, delay = 0, borderColor }: CardProps) {
   );
 }
 
-export function SectionLabel({ children }: { children: string }) {
+export function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <View style={styles.labelContainer}>
       <Text style={styles.label}>{children}</Text>

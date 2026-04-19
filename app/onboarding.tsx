@@ -55,20 +55,28 @@ export default function OnboardingScreen() {
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {step === 0 && (
           <View style={styles.centered}>
+            <Text style={styles.crossIcon}>{'\u2626'}</Text>
             <Text style={styles.huge}>ROYFORGE</Text>
             <View style={styles.divider} />
-            <Text style={styles.tagline}>FORGE THE TOTAL</Text>
-            <Text style={styles.sub}>32 weeks | 130→100 | 465→590+</Text>
+            <Text style={styles.tagline}>GLORIFY GOD IN YOUR BODY</Text>
+            <Text style={styles.sub}>1 Cor 6:20 | 32 weeks | Body as Temple</Text>
+            <View style={{ height: 32 }} />
+            <Text style={styles.desc}>
+              Your body is a temple of the Holy Spirit. Train with discipline, eat with temperance, and forge your strength to the glory of God.
+            </Text>
+            <View style={{ height: 24 }} />
+            <Text style={styles.verse}>
+              "Do you not know that your body is a temple of the Holy Spirit within you, whom you have from God? You are not your own, for you were bought with a price. So glorify God in your body."
+            </Text>
+            <Text style={styles.verseRef}>-- 1 Corinthians 6:19-20</Text>
             <View style={{ height: 40 }} />
-            <Text style={styles.desc}>Body recomposition & strength tracker with a full calorie expenditure engine. Log daily. Train smart. Measure everything.</Text>
-            <View style={{ height: 40 }} />
-            <TouchableOpacity style={styles.btn} onPress={next}><Text style={styles.btnText}>LET'S GO</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.btn} onPress={next}><Text style={styles.btnText}>BEGIN THE JOURNEY</Text></TouchableOpacity>
           </View>
         )}
 
         {step === 1 && (
           <View>
-            <Text style={styles.stepLabel}>1 / 4 — PROFILE</Text>
+            <Text style={styles.stepLabel}>1 / 4 {'\u2014'} PROFILE</Text>
             <Text style={styles.stepTitle}>PHYSICAL PROFILE</Text>
             <InputRow label="AGE" value={age} onChange={setAge} kbd="number-pad" />
             <Text style={styles.fieldLabel}>SEX</Text>
@@ -85,7 +93,7 @@ export default function OnboardingScreen() {
 
         {step === 2 && (
           <View>
-            <Text style={styles.stepLabel}>2 / 4 — STARTING LIFTS</Text>
+            <Text style={styles.stepLabel}>2 / 4 {'\u2014'} STARTING LIFTS</Text>
             <Text style={styles.stepTitle}>CURRENT 1RMs (KG)</Text>
             <InputRow label="SQUAT" value={squat} onChange={setSquat} kbd="decimal-pad" color={COLORS.squat} />
             <InputRow label="BENCH" value={bench} onChange={setBench} kbd="decimal-pad" color={COLORS.bench} />
@@ -101,7 +109,7 @@ export default function OnboardingScreen() {
 
         {step === 3 && (
           <View>
-            <Text style={styles.stepLabel}>3 / 4 — ACTIVITY</Text>
+            <Text style={styles.stepLabel}>3 / 4 {'\u2014'} ACTIVITY</Text>
             <Text style={styles.stepTitle}>DAILY E-BIKE?</Text>
             <View style={styles.pillRow}>
               <TouchableOpacity onPress={() => setEbikeEnabled(true)} style={[styles.pill, ebikeEnabled && styles.pillActive]}><Text style={[styles.pillText, ebikeEnabled && styles.pillTextActive]}>YES</Text></TouchableOpacity>
@@ -114,13 +122,18 @@ export default function OnboardingScreen() {
 
         {step === 4 && (
           <View>
-            <Text style={styles.stepLabel}>4 / 4 — REMINDERS</Text>
+            <Text style={styles.stepLabel}>4 / 4 {'\u2014'} REMINDERS</Text>
             <Text style={styles.stepTitle}>DAILY LOG REMINDER</Text>
             <View style={styles.pillRow}>
               <TouchableOpacity onPress={() => setReminderEnabled(true)} style={[styles.pill, reminderEnabled && styles.pillActive]}><Text style={[styles.pillText, reminderEnabled && styles.pillTextActive]}>ON</Text></TouchableOpacity>
               <TouchableOpacity onPress={() => setReminderEnabled(false)} style={[styles.pill, !reminderEnabled && styles.pillActive]}><Text style={[styles.pillText, !reminderEnabled && styles.pillTextActive]}>OFF</Text></TouchableOpacity>
             </View>
             {reminderEnabled && <InputRow label="TIME (HH:MM)" value={reminderTime} onChange={setReminderTime} />}
+            <View style={{ height: 16 }} />
+            <Text style={styles.blessing}>
+              {'\u2626'} May the Lord bless your journey {'\u2626'}
+            </Text>
+            <View style={{ height: 16 }} />
             <TouchableOpacity style={styles.btn} onPress={finish}><Text style={styles.btnText}>START FORGING</Text></TouchableOpacity>
           </View>
         )}
@@ -142,12 +155,16 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: COLORS.background },
   scroll: { flex: 1 },
   content: { padding: 24, flexGrow: 1 },
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 40 },
+  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 20 },
+  crossIcon: { fontSize: 40, color: COLORS.primary, marginBottom: 12 },
   huge: { fontSize: 36, fontWeight: '900', color: COLORS.textPrimary, fontFamily: mono, letterSpacing: 4 },
   divider: { width: 60, height: 3, backgroundColor: COLORS.primary, marginVertical: 16 },
-  tagline: { fontSize: 14, fontWeight: '700', color: COLORS.primary, fontFamily: mono, letterSpacing: 3 },
-  sub: { fontSize: 11, color: COLORS.textMuted, fontFamily: mono, letterSpacing: 2, marginTop: 6 },
-  desc: { fontSize: 13, color: COLORS.textSecondary, fontFamily: mono, lineHeight: 22, textAlign: 'center', paddingHorizontal: 10 },
+  tagline: { fontSize: 12, fontWeight: '700', color: COLORS.primary, fontFamily: mono, letterSpacing: 2, textAlign: 'center' },
+  sub: { fontSize: 10, color: COLORS.textMuted, fontFamily: mono, letterSpacing: 1, marginTop: 6 },
+  desc: { fontSize: 12, color: COLORS.textSecondary, fontFamily: mono, lineHeight: 20, textAlign: 'center', paddingHorizontal: 10 },
+  verse: { fontSize: 11, color: COLORS.textPrimary, fontFamily: mono, lineHeight: 18, textAlign: 'center', paddingHorizontal: 8, fontStyle: 'italic' },
+  verseRef: { fontSize: 9, color: COLORS.primaryDark, fontFamily: mono, letterSpacing: 1, marginTop: 8, fontWeight: '700' },
+  blessing: { fontSize: 11, color: COLORS.primary, fontFamily: mono, textAlign: 'center', fontWeight: '700', letterSpacing: 1 },
   stepLabel: { fontSize: 10, color: COLORS.primary, fontFamily: mono, letterSpacing: 2, fontWeight: '700', marginBottom: 8 },
   stepTitle: { fontSize: 22, fontWeight: '900', color: COLORS.textPrimary, fontFamily: mono, letterSpacing: 2, marginBottom: 24 },
   inputGroup: { marginBottom: 20 },
@@ -157,7 +174,7 @@ const styles = StyleSheet.create({
   pill: { flex: 1, borderWidth: 1, borderColor: COLORS.ghostBorder, borderRadius: 8, paddingVertical: 12, alignItems: 'center' },
   pillActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
   pillText: { fontSize: 12, fontWeight: '700', color: COLORS.textSecondary, fontFamily: mono, letterSpacing: 1 },
-  pillTextActive: { color: '#fff' },
+  pillTextActive: { color: '#000' },
   btn: { backgroundColor: COLORS.primary, borderRadius: 8, paddingVertical: 16, alignItems: 'center', marginTop: 20 },
-  btnText: { fontSize: 14, fontWeight: '900', color: '#fff', fontFamily: mono, letterSpacing: 2 },
+  btnText: { fontSize: 14, fontWeight: '900', color: '#000', fontFamily: mono, letterSpacing: 2 },
 });

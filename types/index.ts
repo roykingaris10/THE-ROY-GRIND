@@ -133,3 +133,38 @@ export interface WorkoutDay {
   name: string;
   exercises: Exercise[];
 }
+
+export interface GamificationLevel {
+  level: number;
+  name: string;
+  xpRequired: number;
+  icon: string;
+}
+
+export interface Achievement {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  category: 'training' | 'nutrition' | 'consistency' | 'milestone';
+  unlocked: boolean;
+}
+
+export interface VirtueStats {
+  discipline: number;
+  temperance: number;
+  fortitude: number;
+  perseverance: number;
+}
+
+export interface GamificationState {
+  xp: number;
+  level: GamificationLevel;
+  xpToNext: number;
+  levelProgress: number;
+  streak: number;
+  longestStreak: number;
+  achievements: Achievement[];
+  unlockedCount: number;
+  virtues: VirtueStats;
+}
