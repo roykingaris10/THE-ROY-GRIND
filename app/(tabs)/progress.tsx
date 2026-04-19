@@ -21,7 +21,9 @@ import { AchievementRow } from '@/components/AchievementBadge';
 import { VirtueStatsCard } from '@/components/VirtueStats';
 import { DailyVerse } from '@/components/DailyVerse';
 import { ProgressBar } from '@/components/ProgressBar';
-import { MiniChart } from '@/components/MiniChart';
+import { ConstellationChart } from '@/components/ConstellationChart';
+import { RadialGauge } from '@/components/RadialGauge';
+import { StatCallout } from '@/components/StatCallout';
 import { BenchmarkTable } from '@/components/BenchmarkTable';
 import type { LiftType } from '@/types';
 
@@ -91,34 +93,34 @@ export default function ProgressScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 80 }]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.header}>{'\u2626'} PROGRESS</Text>
+        <Text style={styles.header}>{'\u2670'} PROGRESS</Text>
 
         {feast && (
           <View style={styles.feastBanner}>
-            <Text style={styles.feastIcon}>{'\u2B50'}</Text>
+            <Text style={styles.feastIcon}>{'\u2726'}</Text>
             <Text style={styles.feastText}>{feast.name}</Text>
           </View>
         )}
 
         {fasting && fasting.type !== 'weekly' && (
           <View style={styles.fastBanner}>
-            <Text style={styles.fastText}>{'\u{1F56F}'} {fasting.name}</Text>
+            <Text style={styles.fastText}>{'\u2670'} {fasting.name}</Text>
           </View>
         )}
 
         <DailyVerse text={verse.text} reference={verse.reference} />
 
-        <SectionLabel>{'\u2626'} SPIRITUAL RANK</SectionLabel>
+        <SectionLabel>{'\u2670'} SPIRITUAL RANK</SectionLabel>
         <Card delay={50}>
           <XPBar xp={gam.xp} level={gam.level} progress={gam.levelProgress} xpToNext={gam.xpToNext} />
         </Card>
 
-        <SectionLabel>{'\u{1F525}'} STREAK</SectionLabel>
+        <SectionLabel>{'\u2726'} STREAK</SectionLabel>
         <Card delay={100}>
           <StreakCounter current={gam.streak} longest={gam.longestStreak} />
         </Card>
 
-        <SectionLabel>{'\u2626'} VIRTUES</SectionLabel>
+        <SectionLabel>{'\u2670'} VIRTUES</SectionLabel>
         <Card delay={150}>
           <VirtueStatsCard virtues={gam.virtues} />
         </Card>
@@ -136,7 +138,7 @@ export default function ProgressScreen() {
         <Card delay={250}>
           {weightHistory.length > 1 ? (
             <View style={styles.chartContainer}>
-              <MiniChart data={weightHistory} color={COLORS.primary} height={60} width={280} />
+              <ConstellationChart data={weightHistory} color={COLORS.silver} height={70} width={280} showGrid />
               <View style={styles.chartLabels}>
                 <Text style={styles.chartLabel}>Start: {data.profile.startingWeight}kg</Text>
                 <Text style={styles.chartLabel}>Latest: {weightHistory[weightHistory.length - 1]?.toFixed(1)}kg</Text>
@@ -158,7 +160,7 @@ export default function ProgressScreen() {
               </Text>
             </View>
             {lift.data.length > 1 && (
-              <MiniChart data={lift.data} color={lift.color} height={40} width={260} />
+              <ConstellationChart data={lift.data} color={lift.color} height={50} width={260} />
             )}
             <View style={styles.liftTarget}>
               <Text style={styles.targetLabel}>Target: {benchmark[lift.benchKey]}kg</Text>
@@ -173,12 +175,22 @@ export default function ProgressScreen() {
 
         <SectionLabel>ESTIMATED TOTAL</SectionLabel>
         <Card delay={350}>
-          <View style={styles.totalRow}>
-            <Text style={styles.totalValue}>{totalEstimated > 0 ? formatNumber(totalEstimated) : '\u2014'}</Text>
-            <Text style={styles.totalUnit}>kg</Text>
-            <Text style={styles.totalTarget}>/ {finalTotal}kg target</Text>
+          <View style={styles.totalSection}>
+            <RadialGauge
+              progress={totalEstimated > 0 ? totalEstimated / finalTotal : 0}
+              size={100}
+              color={COLORS.primary}
+              label="TOTAL"
+            />
+            <View style={styles.totalInfo}>
+              <StatCallout
+                value={totalEstimated > 0 ? formatNumber(totalEstimated) : '\u2014'}
+                unit="kg"
+                subtitle={`/ ${finalTotal}kg target`}
+                size="small"
+              />
+            </View>
           </View>
-          <ProgressBar progress={totalEstimated / finalTotal} color={COLORS.primary} height={6} showLabel />
         </Card>
 
         <SectionLabel>BENCHMARK TABLE</SectionLabel>
@@ -186,7 +198,7 @@ export default function ProgressScreen() {
           <BenchmarkTable currentWeek={week} stretch={showStretch} />
         </Card>
 
-        <SectionLabel>{`\u{1F3C6} ACHIEVEMENTS (${gam.unlockedCount}/${gam.achievements.length})`}</SectionLabel>
+        <SectionLabel>{`\u2726 ACHIEVEMENTS (${gam.unlockedCount}/${gam.achievements.length})`}</SectionLabel>
         {gam.achievements.map(a => (
           <AchievementRow key={a.id} achievement={a} />
         ))}
@@ -204,7 +216,7 @@ const styles = StyleSheet.create({
   header: {
     fontSize: 22,
     fontWeight: '900',
-    color: COLORS.textPrimary,
+    color: COLORS.silverBright,
     fontFamily: mono,
     letterSpacing: 3,
     textAlign: 'center',
@@ -214,26 +226,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(212,175,55,0.1)',
+    backgroundColor: 'rgba(201,169,97,0.08)',
     borderWidth: 1,
-    borderColor: COLORS.primaryDark,
+    borderColor: COLORS.gold,
     borderRadius: 8,
     padding: 10,
     marginBottom: 12,
     gap: 8,
   },
-  feastIcon: { fontSize: 16 },
-  feastText: { fontSize: 11, color: COLORS.primary, fontFamily: mono, fontWeight: '700', letterSpacing: 1 },
+  feastIcon: { fontSize: 16, color: COLORS.gold },
+  feastText: { fontSize: 11, color: COLORS.gold, fontFamily: mono, fontWeight: '700', letterSpacing: 1 },
   fastBanner: {
-    backgroundColor: 'rgba(139,26,26,0.15)',
+    backgroundColor: 'rgba(107,78,158,0.12)',
     borderWidth: 1,
-    borderColor: COLORS.secondary,
+    borderColor: COLORS.purpleWarm,
     borderRadius: 8,
     padding: 8,
     marginBottom: 12,
     alignItems: 'center',
   },
-  fastText: { fontSize: 10, color: COLORS.secondary, fontFamily: mono, fontWeight: '700', letterSpacing: 1 },
+  fastText: { fontSize: 10, color: COLORS.purpleWarm, fontFamily: mono, fontWeight: '700', letterSpacing: 1 },
   progRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
   progLabel: { fontSize: 12, color: COLORS.textSecondary, fontFamily: mono },
   progPct: { fontSize: 14, fontWeight: '900', color: COLORS.primary, fontFamily: mono },
@@ -243,11 +255,9 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 11, color: COLORS.textMuted, fontFamily: mono, textAlign: 'center', paddingVertical: 12 },
   liftHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   liftName: { fontSize: 13, fontWeight: '900', fontFamily: mono, letterSpacing: 2 },
-  liftBest: { fontSize: 18, fontWeight: '900', color: COLORS.textPrimary, fontFamily: mono },
+  liftBest: { fontSize: 18, fontWeight: '900', color: COLORS.silverBright, fontFamily: mono },
   liftTarget: { marginTop: 8 },
   targetLabel: { fontSize: 9, color: COLORS.textMuted, fontFamily: mono, marginBottom: 4 },
-  totalRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6, marginBottom: 12 },
-  totalValue: { fontSize: 32, fontWeight: '900', color: COLORS.textPrimary, fontFamily: mono },
-  totalUnit: { fontSize: 14, color: COLORS.textMuted, fontFamily: mono },
-  totalTarget: { fontSize: 11, color: COLORS.textSecondary, fontFamily: mono },
+  totalSection: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  totalInfo: { flex: 1 },
 });

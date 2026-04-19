@@ -34,7 +34,7 @@ export function BenchmarkTable({ currentWeek, stretch = false }: { currentWeek: 
 const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: COLORS.border, paddingBottom: 8, marginBottom: 4 },
   row: { flexDirection: 'row', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  curRow: { backgroundColor: 'rgba(255,107,26,0.1)', borderRadius: 4 },
+  curRow: { backgroundColor: 'rgba(107, 78, 158, 0.12)', borderRadius: 4 },
   cell: { width: 52, alignItems: 'center' },
   headerText: { fontSize: 9, fontFamily: 'monospace', color: COLORS.label, textTransform: 'uppercase', letterSpacing: 1, fontWeight: '600' },
   cellText: { fontSize: 12, fontFamily: 'monospace', color: COLORS.textSecondary },

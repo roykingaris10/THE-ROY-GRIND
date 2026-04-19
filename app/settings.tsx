@@ -81,7 +81,7 @@ export default function SettingsScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn}>
           <Text style={styles.closeText}>{'\u2715'}</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>{'\u2626'} SETTINGS</Text>
+        <Text style={styles.title}>{'\u2670'} SETTINGS</Text>
         <View style={{ width: 36 }} />
       </View>
 
@@ -148,8 +148,8 @@ export default function SettingsScreen() {
           <Text style={styles.dangerText}>RESET ALL DATA</Text>
         </TouchableOpacity>
 
-        <Text style={styles.footer}>{'\u2626'} ROYFORGE {'\u2626'}</Text>
-        <Text style={styles.footerSub}>Glorify God in your body</Text>
+        <Text style={styles.footer}>{'\u2670'} INVICTUS {'\u2670'}</Text>
+        <Text style={styles.footerSub}>I am the captain of my soul</Text>
       </ScrollView>
     </View>
   );
@@ -186,7 +186,7 @@ const styles = StyleSheet.create({
   topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: COLORS.border },
   closeBtn: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: COLORS.ghostBorder, alignItems: 'center', justifyContent: 'center' },
   closeText: { fontSize: 16, color: COLORS.textPrimary, fontFamily: mono },
-  title: { fontSize: 16, fontWeight: '900', color: COLORS.textPrimary, fontFamily: mono, letterSpacing: 2 },
+  title: { fontSize: 16, fontWeight: '900', color: COLORS.silverBright, fontFamily: mono, letterSpacing: 2 },
   scroll: { flex: 1 },
   content: { paddingHorizontal: 16, paddingTop: 12 },
   inputGroup: { marginBottom: 16 },
@@ -196,11 +196,11 @@ const styles = StyleSheet.create({
   pill: { flex: 1, borderWidth: 1, borderColor: COLORS.ghostBorder, borderRadius: 8, paddingVertical: 10, alignItems: 'center' },
   pillActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
   pillText: { fontSize: 11, fontWeight: '700', color: COLORS.textSecondary, fontFamily: mono, letterSpacing: 1 },
-  pillTextActive: { color: '#000' },
+  pillTextActive: { color: '#E8EAF0' },
   saveBtn: { backgroundColor: COLORS.primary, borderRadius: 8, paddingVertical: 14, alignItems: 'center', marginTop: 8 },
-  saveBtnText: { fontSize: 13, fontWeight: '900', color: '#000', fontFamily: mono, letterSpacing: 2 },
+  saveBtnText: { fontSize: 13, fontWeight: '900', color: '#E8EAF0', fontFamily: mono, letterSpacing: 2 },
   dangerBtn: { borderWidth: 1, borderColor: COLORS.danger, borderRadius: 8, paddingVertical: 14, alignItems: 'center' },
   dangerText: { fontSize: 12, fontWeight: '700', color: COLORS.danger, fontFamily: mono, letterSpacing: 1 },
-  footer: { fontSize: 12, color: COLORS.primary, fontFamily: mono, textAlign: 'center', marginTop: 32, fontWeight: '700', letterSpacing: 2 },
+  footer: { fontSize: 12, color: COLORS.silver, fontFamily: mono, textAlign: 'center', marginTop: 32, fontWeight: '700', letterSpacing: 2 },
   footerSub: { fontSize: 9, color: COLORS.textMuted, fontFamily: mono, textAlign: 'center', marginTop: 4, fontStyle: 'italic' },
 });

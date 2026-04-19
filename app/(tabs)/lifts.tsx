@@ -280,7 +280,7 @@ export default function LiftsScreen() {
                     rpe === val && { backgroundColor: LIFT_COLORS[selectedLift] },
                   ]}
                 >
-                  <Text style={[styles.rpePillText, rpe === val && { color: '#000' }]}>
+                  <Text style={[styles.rpePillText, rpe === val && { color: '#E8EAF0' }]}>
                     {val}
                   </Text>
                 </TouchableOpacity>
@@ -316,7 +316,7 @@ export default function LiftsScreen() {
             activeOpacity={0.7}
           >
             {submitting ? (
-              <ActivityIndicator color="#000" size="small" />
+              <ActivityIndicator color="#E8EAF0" size="small" />
             ) : (
               <Text style={styles.logButtonText}>LOG SET</Text>
             )}
@@ -591,7 +591,7 @@ const styles = StyleSheet.create({
     fontFamily: MONO,
     fontSize: 14,
     fontWeight: '900',
-    color: '#000',
+    color: '#E8EAF0',
     letterSpacing: 2,
   },
 
@@ -649,8 +649,8 @@ const styles = StyleSheet.create({
     fontFamily: MONO,
     fontSize: 9,
     fontWeight: '900',
-    color: '#000',
-    backgroundColor: COLORS.primary,
+    color: '#E8EAF0',
+    backgroundColor: COLORS.gold,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,

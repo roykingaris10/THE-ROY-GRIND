@@ -13,7 +13,7 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: COLORS.primary,
+        tabBarActiveTintColor: COLORS.silver,
         tabBarInactiveTintColor: COLORS.textMuted,
         tabBarStyle: {
           backgroundColor: COLORS.card,
@@ -49,7 +49,7 @@ export default function TabLayout() {
         name="log"
         options={{
           title: 'Log',
-          tabBarIcon: ({ color }) => <TabIcon name="pencil" color={color} />,
+          tabBarIcon: ({ color }) => <TabIcon name="book" color={color} />,
         }}
       />
       <Tabs.Screen
@@ -63,7 +63,7 @@ export default function TabLayout() {
         name="progress"
         options={{
           title: 'Progress',
-          tabBarIcon: ({ color }) => <TabIcon name="bar-chart" color={color} />,
+          tabBarIcon: ({ color }) => <TabIcon name="star" color={color} />,
         }}
       />
     </Tabs>

@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "RoyForge",
-    "slug": "royforge",
+    "name": "Invictus",
+    "slug": "invictus",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "royforge",
+    "scheme": "invictus",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
@@ -16,7 +16,7 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSMotionUsageDescription": "RoyForge uses motion data to count your daily steps."
+        "NSMotionUsageDescription": "Invictus uses motion data to count your daily steps."
       }
     },
     "android": {

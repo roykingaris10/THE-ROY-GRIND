@@ -7,7 +7,7 @@ import type { VirtueStats as VirtueStatsType } from '@/types';
 const mono = Platform.select({ ios: 'Menlo', default: 'monospace' });
 
 const VIRTUE_DEFS = [
-  { key: 'discipline' as const, label: 'Discipline', icon: '\u{1F4FF}', color: COLORS.streak, desc: 'Consistency of daily logging' },
+  { key: 'discipline' as const, label: 'Discipline', icon: '\u{1F4FF}', color: COLORS.silver, desc: 'Consistency of daily logging' },
   { key: 'temperance' as const, label: 'Temperance', icon: '\u{1F35E}', color: COLORS.success, desc: 'Nutrition target adherence' },
   { key: 'fortitude' as const, label: 'Fortitude', icon: '\u2694', color: COLORS.squat, desc: 'Training completion rate' },
   { key: 'perseverance' as const, label: 'Perseverance', icon: '\u26F0', color: COLORS.primary, desc: 'Program weeks completed' },

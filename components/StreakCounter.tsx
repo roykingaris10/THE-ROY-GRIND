@@ -11,20 +11,20 @@ interface StreakCounterProps {
 }
 
 export function StreakCounter({ current, longest, compact }: StreakCounterProps) {
-  const flameSize = compact ? 20 : 32;
+  const starSize = compact ? 18 : 28;
   const isActive = current > 0;
 
   return (
     <View style={[styles.container, compact && styles.compact]}>
-      <Text style={[styles.flame, { fontSize: flameSize }]}>
-        {isActive ? '\u{1F525}' : '\u{1F56F}'}
+      <Text style={[styles.star, { fontSize: starSize, color: isActive ? COLORS.silver : COLORS.textMuted }]}>
+        {isActive ? '\u2726' : '\u2727'}
       </Text>
       <View style={styles.textCol}>
         <Text style={[styles.count, !isActive && styles.countInactive]}>
           {current}
         </Text>
         <Text style={styles.label}>
-          {current === 1 ? 'DAY STREAK' : 'DAY STREAK'}
+          DAY STREAK
         </Text>
       </View>
       {!compact && (
@@ -40,9 +40,9 @@ export function StreakCounter({ current, longest, compact }: StreakCounterProps)
 const styles = StyleSheet.create({
   container: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   compact: { gap: 8 },
-  flame: { textAlign: 'center' },
+  star: { textAlign: 'center' },
   textCol: { flex: 1 },
-  count: { fontSize: 24, fontWeight: '900', color: COLORS.streak, fontFamily: mono },
+  count: { fontSize: 24, fontWeight: '900', color: COLORS.silver, fontFamily: mono },
   countInactive: { color: COLORS.textMuted },
   label: { fontSize: 9, color: COLORS.textSecondary, fontFamily: mono, letterSpacing: 1.5, textTransform: 'uppercase' },
   bestCol: { alignItems: 'center' },

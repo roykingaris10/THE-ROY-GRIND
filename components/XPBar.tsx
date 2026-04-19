@@ -47,9 +47,9 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   levelBadge: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   levelIcon: { fontSize: 20 },
-  levelName: { fontSize: 14, fontWeight: '900', color: COLORS.xp, fontFamily: mono, letterSpacing: 1, textTransform: 'uppercase' },
+  levelName: { fontSize: 14, fontWeight: '900', color: COLORS.silver, fontFamily: mono, letterSpacing: 1, textTransform: 'uppercase' },
   xpText: { fontSize: 16, fontWeight: '900', color: COLORS.textPrimary, fontFamily: mono },
   track: { height: 8, backgroundColor: COLORS.border, borderRadius: 4, overflow: 'hidden' },
-  fill: { height: 8, backgroundColor: COLORS.xp, borderRadius: 4 },
+  fill: { height: 8, backgroundColor: COLORS.primary, borderRadius: 4 },
   nextText: { fontSize: 9, color: COLORS.textMuted, fontFamily: mono, letterSpacing: 1, marginTop: 4, textAlign: 'right' },
 });

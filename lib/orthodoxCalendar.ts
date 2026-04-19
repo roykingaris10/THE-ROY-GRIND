@@ -49,6 +49,9 @@ const VERSES: DailyVerse[] = [
   { text: 'The body is not evil. It is the instrument of the soul.', reference: 'St. Maximus the Confessor' },
   { text: 'Prayer is the place of refuge for every worry, a foundation for cheerfulness, a source of constant happiness.', reference: 'St. John Chrysostom' },
   { text: 'God does not demand or desire that a person fast to the point of exhaustion, but rather the bodily fast is the beginning of the spiritual.', reference: 'St. Basil the Great' },
+  { text: 'Out of the night that covers me, black as the pit from pole to pole, I thank whatever gods may be for my unconquerable soul.', reference: 'W.E. Henley, Invictus' },
+  { text: 'I am the master of my fate, I am the captain of my soul.', reference: 'W.E. Henley, Invictus' },
+  { text: 'It matters not how strait the gate, how charged with punishments the scroll, I am the master of my fate, I am the captain of my soul.', reference: 'W.E. Henley, Invictus' },
 ];
 
 const FIXED_FEASTS: Record<string, FeastDay> = {

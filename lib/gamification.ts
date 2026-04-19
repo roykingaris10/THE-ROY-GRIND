@@ -2,41 +2,41 @@ import type { AppData, GamificationLevel, Achievement, VirtueStats, Gamification
 import { getDateString, getBestE1RM } from './helpers';
 
 export const LEVELS: GamificationLevel[] = [
-  { level: 1, name: 'Catechumen', xpRequired: 0, icon: '\u2720' },
-  { level: 2, name: 'Reader', xpRequired: 100, icon: '\u{1F4D6}' },
-  { level: 3, name: 'Subdeacon', xpRequired: 300, icon: '\u{1F56F}' },
-  { level: 4, name: 'Deacon', xpRequired: 600, icon: '\u2626' },
-  { level: 5, name: 'Priest', xpRequired: 1000, icon: '\u{1F3DB}' },
+  { level: 1, name: 'Neophyte', xpRequired: 0, icon: '\u2729' },
+  { level: 2, name: 'Reader', xpRequired: 100, icon: '\u2606' },
+  { level: 3, name: 'Subdeacon', xpRequired: 300, icon: '\u2670' },
+  { level: 4, name: 'Deacon', xpRequired: 600, icon: '\u2720' },
+  { level: 5, name: 'Priest', xpRequired: 1000, icon: '\u269B' },
   { level: 6, name: 'Archpriest', xpRequired: 1600, icon: '\u2654' },
-  { level: 7, name: 'Bishop', xpRequired: 2400, icon: '\u{1F451}' },
-  { level: 8, name: 'Archbishop', xpRequired: 3500, icon: '\u269C' },
-  { level: 9, name: 'Metropolitan', xpRequired: 5000, icon: '\u{1F31F}' },
-  { level: 10, name: 'Patriarch', xpRequired: 7000, icon: '\u{1FA90}' },
-  { level: 11, name: 'Desert Father', xpRequired: 10000, icon: '\u{1F3D4}' },
-  { level: 12, name: 'Saint', xpRequired: 15000, icon: '\u{1F607}' },
+  { level: 7, name: 'Bishop', xpRequired: 2400, icon: '\u2727' },
+  { level: 8, name: 'Archbishop', xpRequired: 3500, icon: '\u2736' },
+  { level: 9, name: 'Metropolitan', xpRequired: 5000, icon: '\u2742' },
+  { level: 10, name: 'Patriarch', xpRequired: 7000, icon: '\u2741' },
+  { level: 11, name: 'Desert Father', xpRequired: 10000, icon: '\u2738' },
+  { level: 12, name: 'Invictus', xpRequired: 15000, icon: '\u2726' },
 ];
 
 const ACHIEVEMENT_DEFS: Omit<Achievement, 'unlocked'>[] = [
-  { id: 'first_fruits', name: 'First Fruits', description: 'Log your first working set', icon: '\u{1F33E}', category: 'training' },
+  { id: 'first_fruits', name: 'First Fruits', description: 'Log your first working set', icon: '\u2726', category: 'training' },
   { id: 'iron_sharpens', name: 'Iron Sharpens Iron', description: 'Log 100 working sets (Prov 27:17)', icon: '\u2694', category: 'training' },
-  { id: 'mighty_strength', name: 'Mighty in Strength', description: 'Estimated total over 400kg (Psalm 24:8)', icon: '\u{1F4AA}', category: 'training' },
-  { id: 'samsons_strength', name: "Samson's Strength", description: 'Estimated total over 500kg', icon: '\u{1F981}', category: 'training' },
-  { id: 'temple_builder', name: 'Temple Builder', description: 'Complete all workouts in a week', icon: '\u{1F3DB}', category: 'training' },
-  { id: 'good_fight', name: 'The Good Fight', description: 'Complete 4 weeks of training (2 Tim 4:7)', icon: '\u{1F396}', category: 'training' },
-  { id: 'daily_bread', name: 'Daily Bread', description: 'Log nutrition for 7 consecutive days (Matt 6:11)', icon: '\u{1F35E}', category: 'nutrition' },
-  { id: 'faithful_steward', name: 'Faithful Steward', description: 'Hit calorie target for 14 days (Luke 12:42)', icon: '\u{1F3AF}', category: 'nutrition' },
-  { id: 'temperance_virtue', name: 'Temperance', description: 'Stay within all macro targets for 7 days', icon: '\u{1F3C6}', category: 'nutrition' },
-  { id: 'living_sacrifice', name: 'Living Sacrifice', description: 'Train during a deload week (Rom 12:1)', icon: '\u{1F525}', category: 'nutrition' },
-  { id: 'daily_offering', name: 'Daily Offering', description: '7-day logging streak', icon: '\u{1F56F}', category: 'consistency' },
-  { id: 'persistence_prayer', name: 'Persistence in Prayer', description: '21-day logging streak (Col 4:2)', icon: '\u{1F4FF}', category: 'consistency' },
-  { id: 'forty_days', name: '40 Days in the Wilderness', description: '40-day logging streak (Matt 4:2)', icon: '\u{1F3DC}', category: 'consistency' },
-  { id: 'resurrection', name: 'Resurrection', description: 'Return to logging after 3+ days off', icon: '\u2626', category: 'consistency' },
-  { id: 'pillar_of_faith', name: 'Pillar of Faith', description: 'Complete Block 1 (8 weeks)', icon: '\u{1F3DB}', category: 'milestone' },
-  { id: 'burning_bush', name: 'Burning Bush', description: 'Hit your first PR (Exodus 3)', icon: '\u{1F525}', category: 'milestone' },
-  { id: 'davids_stone', name: "David's Stone", description: 'Hit a benchmark lift target', icon: '\u{1FAA8}', category: 'milestone' },
-  { id: 'mount_tabor', name: 'Mount Tabor', description: 'Lose 10kg from starting weight (Transfiguration)', icon: '\u26F0', category: 'milestone' },
-  { id: 'theosis', name: 'Theosis', description: 'Complete all 32 weeks of the program', icon: '\u{1F31F}', category: 'milestone' },
-  { id: 'body_temple', name: 'Body as Temple', description: 'Log weight, nutrition, and training in a single day', icon: '\u26EA', category: 'milestone' },
+  { id: 'mighty_strength', name: 'Mighty in Strength', description: 'Estimated total over 400kg (Psalm 24:8)', icon: '\u2735', category: 'training' },
+  { id: 'samsons_strength', name: "Samson's Strength", description: 'Estimated total over 500kg', icon: '\u2736', category: 'training' },
+  { id: 'temple_builder', name: 'Temple Builder', description: 'Complete all workouts in a week', icon: '\u2670', category: 'training' },
+  { id: 'good_fight', name: 'The Good Fight', description: 'Complete 4 weeks of training (2 Tim 4:7)', icon: '\u2727', category: 'training' },
+  { id: 'daily_bread', name: 'Daily Bread', description: 'Log nutrition for 7 consecutive days (Matt 6:11)', icon: '\u2606', category: 'nutrition' },
+  { id: 'faithful_steward', name: 'Faithful Steward', description: 'Hit calorie target for 14 days (Luke 12:42)', icon: '\u2738', category: 'nutrition' },
+  { id: 'temperance_virtue', name: 'Temperance', description: 'Stay within all macro targets for 7 days', icon: '\u2742', category: 'nutrition' },
+  { id: 'living_sacrifice', name: 'Living Sacrifice', description: 'Train during a deload week (Rom 12:1)', icon: '\u2729', category: 'nutrition' },
+  { id: 'daily_offering', name: 'Daily Offering', description: '7-day logging streak', icon: '\u2605', category: 'consistency' },
+  { id: 'persistence_prayer', name: 'Persistence in Prayer', description: '21-day logging streak (Col 4:2)', icon: '\u2670', category: 'consistency' },
+  { id: 'forty_days', name: '40 Days in the Wilderness', description: '40-day logging streak (Matt 4:2)', icon: '\u2741', category: 'consistency' },
+  { id: 'resurrection', name: 'Resurrection', description: 'Return to logging after 3+ days off', icon: '\u2720', category: 'consistency' },
+  { id: 'pillar_of_faith', name: 'Pillar of Faith', description: 'Complete Block 1 (8 weeks)', icon: '\u2670', category: 'milestone' },
+  { id: 'burning_bush', name: 'Burning Bush', description: 'Hit your first PR (Exodus 3)', icon: '\u2735', category: 'milestone' },
+  { id: 'davids_stone', name: "David's Stone", description: 'Hit a benchmark lift target', icon: '\u2726', category: 'milestone' },
+  { id: 'mount_tabor', name: 'Mount Tabor', description: 'Lose 10kg from starting weight (Transfiguration)', icon: '\u2737', category: 'milestone' },
+  { id: 'theosis', name: 'Theosis', description: 'Complete all 32 weeks of the program', icon: '\u2742', category: 'milestone' },
+  { id: 'body_temple', name: 'Body as Temple', description: 'Log weight, nutrition, and training in a single day', icon: '\u2670', category: 'milestone' },
 ];
 
 export function computeXP(data: AppData): number {
@@ -129,7 +129,7 @@ export function computeStreak(data: AppData): { current: number; longest: number
 export function computeAchievements(data: AppData): Achievement[] {
   const workingSets = data.sets.filter(s => !s.isWarmup);
   const prs = data.sets.filter(s => s.isPR);
-  const { current: streak, longest } = computeStreak(data);
+  const { longest } = computeStreak(data);
   const sqE1rm = getBestE1RM(data.sets, 'squat');
   const bnE1rm = getBestE1RM(data.sets, 'bench');
   const dlE1rm = getBestE1RM(data.sets, 'deadlift');

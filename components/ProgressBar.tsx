@@ -28,7 +28,24 @@ export function ProgressBar({ progress, color = COLORS.primary, height = 6, show
       )}
       <View style={[styles.track, { height }]}>
         <Animated.View
-          style={[styles.fill, { height, backgroundColor: color, width: animWidth.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) }]}
+          style={[
+            styles.fill,
+            {
+              height,
+              backgroundColor: color,
+              width: animWidth.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }),
+            },
+          ]}
+        />
+        {/* Subtle gradient highlight along the top edge */}
+        <Animated.View
+          style={[
+            styles.highlight,
+            {
+              height: Math.max(1, height / 3),
+              width: animWidth.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }),
+            },
+          ]}
         />
       </View>
     </View>
@@ -37,7 +54,14 @@ export function ProgressBar({ progress, color = COLORS.primary, height = 6, show
 
 const styles = StyleSheet.create({
   track: { backgroundColor: COLORS.border, borderRadius: 3, overflow: 'hidden', width: '100%' },
-  fill: { borderRadius: 3 },
+  fill: { borderRadius: 3, position: 'absolute', left: 0, top: 0 },
+  highlight: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    borderRadius: 3,
+    backgroundColor: 'rgba(232, 234, 240, 0.12)',
+  },
   labelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
   labelText: { fontSize: 10, color: COLORS.textMuted, fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: 1 },
 });

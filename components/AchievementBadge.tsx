@@ -57,8 +57,8 @@ export function AchievementGrid({ achievements }: { achievements: Achievement[] 
 const CATEGORY_COLORS: Record<string, string> = {
   training: COLORS.squat,
   nutrition: COLORS.success,
-  consistency: COLORS.streak,
-  milestone: COLORS.xp,
+  consistency: COLORS.silver,
+  milestone: COLORS.primary,
 };
 
 export function AchievementRow({ achievement }: { achievement: Achievement }) {
@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: COLORS.card,
     borderWidth: 1,
-    borderColor: COLORS.xp,
+    borderColor: COLORS.gold,
   },
   badgeLarge: { width: '47%', padding: 12 },
   locked: { borderColor: COLORS.border, opacity: 0.5 },

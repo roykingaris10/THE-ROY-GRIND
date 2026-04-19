@@ -13,7 +13,7 @@ interface DailyVerseProps {
 export function DailyVerse({ text, reference, compact }: DailyVerseProps) {
   return (
     <View style={[styles.container, compact && styles.compact]}>
-      <Text style={styles.cross}>{'\u2626'}</Text>
+      <Text style={styles.cross}>{'\u2670'}</Text>
       <Text style={[styles.text, compact && styles.textCompact]} numberOfLines={compact ? 2 : undefined}>
         "{text}"
       </Text>

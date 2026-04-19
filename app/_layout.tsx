@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { StatusBar } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { useAppData } from '@/hooks/useAppData';
+import { AppDataProvider, useAppData } from '@/hooks/useAppData';
 import { COLORS } from '@/lib/constants';
 
 export { ErrorBoundary } from 'expo-router';
@@ -46,8 +46,10 @@ function RootNav() {
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
-      <RootNav />
+      <AppDataProvider>
+        <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
+        <RootNav />
+      </AppDataProvider>
     </SafeAreaProvider>
   );
 }

@@ -410,7 +410,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   pillTextActive: {
-    color: '#000',
+    color: '#E8EAF0',
   },
   dayName: {
     fontSize: 16,
@@ -433,7 +433,7 @@ const styles = StyleSheet.create({
   startBtnText: {
     fontSize: 14,
     fontWeight: '900',
-    color: '#000',
+    color: '#E8EAF0',
     fontFamily: mono,
     letterSpacing: 2,
   },
@@ -475,7 +475,7 @@ const styles = StyleSheet.create({
   finishBtnText: {
     fontSize: 14,
     fontWeight: '900',
-    color: '#000',
+    color: '#E8EAF0',
     fontFamily: mono,
     letterSpacing: 3,
   },

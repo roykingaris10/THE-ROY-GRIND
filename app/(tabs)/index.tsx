@@ -114,7 +114,7 @@ export default function DashboardScreen() {
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.loadingText}>{'\u2626'} Loading RoyForge...</Text>
+          <Text style={styles.loadingText}>{'\u2670'} Loading Invictus...</Text>
         </View>
       </View>
     );
@@ -142,11 +142,10 @@ export default function DashboardScreen() {
           />
         }
       >
-        {/* HEADER */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Text style={styles.cross}>{'\u2626'}</Text>
-            <Text style={styles.headerTitle}>ROYFORGE</Text>
+            <Text style={styles.cross}>{'\u2670'}</Text>
+            <Text style={styles.headerTitle}>INVICTUS</Text>
           </View>
           <View style={styles.headerRight}>
             <Text style={styles.weekNumber}>W{week}</Text>
@@ -160,10 +159,8 @@ export default function DashboardScreen() {
           </View>
         </View>
 
-        {/* GREETING */}
         <Text style={styles.greeting}>{greeting}</Text>
 
-        {/* TAGS ROW */}
         <View style={styles.tagsRow}>
           <View style={styles.tag}>
             <Text style={styles.tagText}>{block.name}</Text>
@@ -180,27 +177,24 @@ export default function DashboardScreen() {
           )}
           {fasting && fasting.type !== 'weekly' && (
             <View style={[styles.tag, styles.tagFasting]}>
-              <Text style={[styles.tagText, styles.tagFastingText]}>{'\u{1F56F}'} {fasting.name}</Text>
+              <Text style={[styles.tagText, styles.tagFastingText]}>{'\u2670'} {fasting.name}</Text>
             </View>
           )}
         </View>
 
-        {/* XP + STREAK ROW */}
         <Card delay={0}>
           <XPBar xp={gam.xp} level={gam.level} progress={gam.levelProgress} xpToNext={gam.xpToNext} />
           <View style={styles.streakRow}>
             <StreakCounter current={gam.streak} longest={gam.longestStreak} compact />
             <View style={styles.achievementCount}>
-              <Text style={styles.achievementIcon}>{'\u{1F3C6}'}</Text>
+              <Text style={styles.achievementIcon}>{'\u2726'}</Text>
               <Text style={styles.achievementText}>{gam.unlockedCount}/{gam.achievements.length}</Text>
             </View>
           </View>
         </Card>
 
-        {/* DAILY VERSE */}
         <DailyVerse text={verse.text} reference={verse.reference} compact />
 
-        {/* RED FLAGS */}
         {redFlags.length > 0 && (
           <>
             <SectionLabel>Alerts</SectionLabel>
@@ -208,7 +202,6 @@ export default function DashboardScreen() {
           </>
         )}
 
-        {/* CALORIE BALANCE */}
         <SectionLabel>Calorie Balance</SectionLabel>
         <CalorieBalanceCard
           caloriesIn={calBalance.caloriesIn}
@@ -217,7 +210,6 @@ export default function DashboardScreen() {
           status={calBalance.status}
         />
 
-        {/* BODYWEIGHT */}
         <SectionLabel>Bodyweight</SectionLabel>
         <Card delay={100}>
           <View style={styles.bwCardRow}>
@@ -226,7 +218,7 @@ export default function DashboardScreen() {
               <Text style={styles.bwUnit}>kg</Text>
             </View>
             <View style={styles.bwCenter}>
-              <MiniChart data={weightData.sparkline} color={COLORS.primary} height={36} width={100} />
+              <MiniChart data={weightData.sparkline} color={COLORS.silver} height={36} width={100} />
             </View>
             <View style={styles.bwRight}>
               <Text style={styles.bwTargetLabel}>TARGET</Text>
@@ -238,7 +230,6 @@ export default function DashboardScreen() {
           </View>
         </Card>
 
-        {/* LIFTS OVERVIEW */}
         <SectionLabel>Lifts (Best E1RM)</SectionLabel>
         <Card delay={200}>
           <View style={styles.liftsRow}>
@@ -257,7 +248,6 @@ export default function DashboardScreen() {
           </View>
         </Card>
 
-        {/* ESTIMATED TOTAL */}
         <SectionLabel>Estimated Total</SectionLabel>
         <Card delay={250}>
           <View style={styles.totalRow}>
@@ -275,7 +265,6 @@ export default function DashboardScreen() {
           </View>
         </Card>
 
-        {/* TODAY'S SNAPSHOT */}
         <SectionLabel>Today's Snapshot</SectionLabel>
         <Card delay={300}>
           {todayEntry && (todayEntry.weight || todayEntry.calories || todayEntry.steps || todayEntry.sleep) ? (
@@ -293,7 +282,6 @@ export default function DashboardScreen() {
           )}
         </Card>
 
-        {/* CURRENT BLOCK */}
         <SectionLabel>Current Block</SectionLabel>
         <Card delay={350}>
           <Text style={styles.blockName}>{block.name}</Text>
@@ -348,8 +336,8 @@ const styles = StyleSheet.create({
 
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12, paddingBottom: 4 },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  cross: { fontSize: 22, color: COLORS.primary },
-  headerTitle: { fontSize: 22, fontWeight: '900', color: COLORS.textPrimary, fontFamily: mono, letterSpacing: 2 },
+  cross: { fontSize: 22, color: COLORS.silver },
+  headerTitle: { fontSize: 22, fontWeight: '900', color: COLORS.silverBright, fontFamily: mono, letterSpacing: 3 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   weekNumber: { fontSize: 28, fontWeight: '900', color: COLORS.primary, fontFamily: mono },
   settingsButton: { padding: 4 },
@@ -359,21 +347,21 @@ const styles = StyleSheet.create({
   tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
   tag: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: COLORS.ghostBorder, backgroundColor: COLORS.card },
   tagText: { fontSize: 10, fontFamily: mono, letterSpacing: 1, textTransform: 'uppercase', color: COLORS.textSecondary },
-  tagDeload: { borderColor: COLORS.primary, backgroundColor: 'rgba(212,175,55,0.1)' },
+  tagDeload: { borderColor: COLORS.primary, backgroundColor: 'rgba(107,78,158,0.12)' },
   tagDeloadText: { color: COLORS.primary, fontWeight: '700' },
-  tagDietBreak: { borderColor: COLORS.success, backgroundColor: 'rgba(68,187,136,0.1)' },
+  tagDietBreak: { borderColor: COLORS.success, backgroundColor: 'rgba(143,179,150,0.12)' },
   tagDietBreakText: { color: COLORS.success, fontWeight: '700' },
-  tagFasting: { borderColor: COLORS.secondary, backgroundColor: 'rgba(139,26,26,0.1)' },
-  tagFastingText: { color: '#AA4444', fontWeight: '700' },
+  tagFasting: { borderColor: COLORS.purpleWarm, backgroundColor: 'rgba(139,127,184,0.12)' },
+  tagFastingText: { color: COLORS.purpleWarm, fontWeight: '700' },
 
   streakRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: COLORS.border },
   achievementCount: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  achievementIcon: { fontSize: 16 },
+  achievementIcon: { fontSize: 16, color: COLORS.gold },
   achievementText: { fontSize: 13, fontWeight: '700', color: COLORS.textPrimary, fontFamily: mono },
 
   bwCardRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   bwLeft: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
-  bwLatest: { fontSize: 28, fontWeight: '900', color: COLORS.textPrimary, fontFamily: mono },
+  bwLatest: { fontSize: 28, fontWeight: '900', color: COLORS.silverBright, fontFamily: mono },
   bwUnit: { fontSize: 12, color: COLORS.textMuted, fontFamily: mono },
   bwCenter: { alignItems: 'center' },
   bwRight: { alignItems: 'flex-end' },
@@ -384,13 +372,13 @@ const styles = StyleSheet.create({
   liftsRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 },
   liftCol: { flex: 1, alignItems: 'center' },
   liftLabel: { fontSize: 11, fontWeight: '900', fontFamily: mono, letterSpacing: 1.5, marginBottom: 4 },
-  liftValue: { fontSize: 22, fontWeight: '900', color: COLORS.textPrimary, fontFamily: mono },
+  liftValue: { fontSize: 22, fontWeight: '900', color: COLORS.silverBright, fontFamily: mono },
   liftUnit: { fontSize: 9, color: COLORS.textMuted, fontFamily: mono, marginBottom: 4 },
   liftChartContainer: { marginVertical: 4 },
   liftTarget: { fontSize: 9, color: COLORS.textMuted, fontFamily: mono, marginBottom: 6, marginTop: 2 },
 
   totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  totalValue: { fontSize: 30, fontWeight: '900', color: COLORS.textPrimary, fontFamily: mono },
+  totalValue: { fontSize: 30, fontWeight: '900', color: COLORS.silverBright, fontFamily: mono },
   totalUnit: { fontSize: 10, color: COLORS.textMuted, fontFamily: mono, marginTop: 2 },
   totalTargetCol: { alignItems: 'flex-end' },
   totalTargetLabel: { fontSize: 9, color: COLORS.label, fontFamily: mono, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 2 },
@@ -400,7 +388,7 @@ const styles = StyleSheet.create({
   snapshotGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   snapshotItem: { flex: 1, minWidth: '40%', alignItems: 'center', paddingVertical: 10, gap: 4 },
   snapshotLabel: { fontSize: 9, color: COLORS.label, fontFamily: mono, letterSpacing: 1.5, textTransform: 'uppercase' },
-  snapshotValue: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary, fontFamily: mono },
+  snapshotValue: { fontSize: 15, fontWeight: '700', color: COLORS.silverBright, fontFamily: mono },
   noDataContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 12 },
   noDataText: { fontSize: 12, color: COLORS.textSecondary, fontFamily: mono },
 
@@ -409,7 +397,7 @@ const styles = StyleSheet.create({
   blockMetaRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 },
   blockMetaItem: { flex: 1, alignItems: 'center', paddingVertical: 8, backgroundColor: COLORS.background, borderRadius: 8 },
   blockMetaLabel: { fontSize: 8, color: COLORS.label, fontFamily: mono, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 },
-  blockMetaValue: { fontSize: 12, fontWeight: '700', color: COLORS.textPrimary, fontFamily: mono },
+  blockMetaValue: { fontSize: 12, fontWeight: '700', color: COLORS.silverBright, fontFamily: mono },
   nutritionRow: { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: COLORS.border },
   nutritionLabel: { fontSize: 9, color: COLORS.label, fontFamily: mono, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 4 },
   nutritionValue: { fontSize: 14, fontWeight: '700', color: COLORS.success, fontFamily: mono, marginBottom: 2 },

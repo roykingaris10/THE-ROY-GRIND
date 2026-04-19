@@ -1,9 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { AppData, DailyEntry, SetLog, WorkoutSession } from '@/types';
+import type { AppData, SetLog } from '@/types';
 import { PROGRAM_START_DEFAULT } from './constants';
 import { getEstimated1RM } from './helpers';
 
-const STORAGE_KEY = 'royforge-data-v1';
+const STORAGE_KEY = 'invictus-data-v1';
+const LEGACY_KEY = 'royforge-data-v1';
 
 let saveTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -32,7 +33,14 @@ function getDefaultData(): AppData {
 
 export async function loadData(): Promise<AppData> {
   try {
-    const raw = await AsyncStorage.getItem(STORAGE_KEY);
+    let raw = await AsyncStorage.getItem(STORAGE_KEY);
+    if (!raw) {
+      raw = await AsyncStorage.getItem(LEGACY_KEY);
+      if (raw) {
+        await AsyncStorage.setItem(STORAGE_KEY, raw);
+        await AsyncStorage.removeItem(LEGACY_KEY);
+      }
+    }
     if (raw) {
       const parsed = JSON.parse(raw) as AppData;
       return {
@@ -97,6 +105,7 @@ export function addSetToData(data: AppData, set: Omit<SetLog, 'id' | 'e1rm' | 'i
 
 export async function clearAllData(): Promise<void> {
   await AsyncStorage.removeItem(STORAGE_KEY);
+  await AsyncStorage.removeItem(LEGACY_KEY);
 }
 
 export async function exportData(): Promise<string> {

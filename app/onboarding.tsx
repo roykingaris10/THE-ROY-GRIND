@@ -55,20 +55,25 @@ export default function OnboardingScreen() {
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {step === 0 && (
           <View style={styles.centered}>
-            <Text style={styles.crossIcon}>{'\u2626'}</Text>
-            <Text style={styles.huge}>ROYFORGE</Text>
+            <Text style={styles.crossIcon}>{'\u2670'}</Text>
+            <Text style={styles.huge}>INVICTUS</Text>
             <View style={styles.divider} />
-            <Text style={styles.tagline}>GLORIFY GOD IN YOUR BODY</Text>
-            <Text style={styles.sub}>1 Cor 6:20 | 32 weeks | Body as Temple</Text>
+            <Text style={styles.tagline}>I AM THE MASTER OF MY FATE</Text>
+            <Text style={styles.sub}>32 weeks | Body as Temple | Unconquerable</Text>
             <View style={{ height: 32 }} />
             <Text style={styles.desc}>
               Your body is a temple of the Holy Spirit. Train with discipline, eat with temperance, and forge your strength to the glory of God.
             </Text>
             <View style={{ height: 24 }} />
             <Text style={styles.verse}>
-              "Do you not know that your body is a temple of the Holy Spirit within you, whom you have from God? You are not your own, for you were bought with a price. So glorify God in your body."
+              "Out of the night that covers me, black as the pit from pole to pole, I thank whatever gods may be for my unconquerable soul."
             </Text>
-            <Text style={styles.verseRef}>-- 1 Corinthians 6:19-20</Text>
+            <Text style={styles.verseRef}>-- W.E. Henley, Invictus</Text>
+            <View style={{ height: 16 }} />
+            <Text style={styles.verse}>
+              "Do you not know that your body is a temple of the Holy Spirit within you, whom you have from God?"
+            </Text>
+            <Text style={styles.verseRef}>-- 1 Corinthians 6:19</Text>
             <View style={{ height: 40 }} />
             <TouchableOpacity style={styles.btn} onPress={next}><Text style={styles.btnText}>BEGIN THE JOURNEY</Text></TouchableOpacity>
           </View>
@@ -131,10 +136,10 @@ export default function OnboardingScreen() {
             {reminderEnabled && <InputRow label="TIME (HH:MM)" value={reminderTime} onChange={setReminderTime} />}
             <View style={{ height: 16 }} />
             <Text style={styles.blessing}>
-              {'\u2626'} May the Lord bless your journey {'\u2626'}
+              {'\u2670'} I am the captain of my soul {'\u2670'}
             </Text>
             <View style={{ height: 16 }} />
-            <TouchableOpacity style={styles.btn} onPress={finish}><Text style={styles.btnText}>START FORGING</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.btn} onPress={finish}><Text style={styles.btnText}>BEGIN</Text></TouchableOpacity>
           </View>
         )}
       </ScrollView>
@@ -156,17 +161,17 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { padding: 24, flexGrow: 1 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 20 },
-  crossIcon: { fontSize: 40, color: COLORS.primary, marginBottom: 12 },
-  huge: { fontSize: 36, fontWeight: '900', color: COLORS.textPrimary, fontFamily: mono, letterSpacing: 4 },
+  crossIcon: { fontSize: 40, color: COLORS.silver, marginBottom: 12 },
+  huge: { fontSize: 36, fontWeight: '900', color: COLORS.silverBright, fontFamily: mono, letterSpacing: 6 },
   divider: { width: 60, height: 3, backgroundColor: COLORS.primary, marginVertical: 16 },
-  tagline: { fontSize: 12, fontWeight: '700', color: COLORS.primary, fontFamily: mono, letterSpacing: 2, textAlign: 'center' },
+  tagline: { fontSize: 11, fontWeight: '700', color: COLORS.silver, fontFamily: mono, letterSpacing: 2, textAlign: 'center' },
   sub: { fontSize: 10, color: COLORS.textMuted, fontFamily: mono, letterSpacing: 1, marginTop: 6 },
   desc: { fontSize: 12, color: COLORS.textSecondary, fontFamily: mono, lineHeight: 20, textAlign: 'center', paddingHorizontal: 10 },
   verse: { fontSize: 11, color: COLORS.textPrimary, fontFamily: mono, lineHeight: 18, textAlign: 'center', paddingHorizontal: 8, fontStyle: 'italic' },
-  verseRef: { fontSize: 9, color: COLORS.primaryDark, fontFamily: mono, letterSpacing: 1, marginTop: 8, fontWeight: '700' },
-  blessing: { fontSize: 11, color: COLORS.primary, fontFamily: mono, textAlign: 'center', fontWeight: '700', letterSpacing: 1 },
+  verseRef: { fontSize: 9, color: COLORS.purpleWarm, fontFamily: mono, letterSpacing: 1, marginTop: 8, fontWeight: '700' },
+  blessing: { fontSize: 11, color: COLORS.silver, fontFamily: mono, textAlign: 'center', fontWeight: '700', letterSpacing: 1 },
   stepLabel: { fontSize: 10, color: COLORS.primary, fontFamily: mono, letterSpacing: 2, fontWeight: '700', marginBottom: 8 },
-  stepTitle: { fontSize: 22, fontWeight: '900', color: COLORS.textPrimary, fontFamily: mono, letterSpacing: 2, marginBottom: 24 },
+  stepTitle: { fontSize: 22, fontWeight: '900', color: COLORS.silverBright, fontFamily: mono, letterSpacing: 2, marginBottom: 24 },
   inputGroup: { marginBottom: 20 },
   fieldLabel: { fontSize: 10, color: COLORS.label, fontFamily: mono, letterSpacing: 1.5, fontWeight: '700', marginBottom: 8 },
   input: { backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.border, borderRadius: 8, padding: 14, fontSize: 18, color: COLORS.textPrimary, fontFamily: mono },
@@ -174,7 +179,7 @@ const styles = StyleSheet.create({
   pill: { flex: 1, borderWidth: 1, borderColor: COLORS.ghostBorder, borderRadius: 8, paddingVertical: 12, alignItems: 'center' },
   pillActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
   pillText: { fontSize: 12, fontWeight: '700', color: COLORS.textSecondary, fontFamily: mono, letterSpacing: 1 },
-  pillTextActive: { color: '#000' },
+  pillTextActive: { color: '#E8EAF0' },
   btn: { backgroundColor: COLORS.primary, borderRadius: 8, paddingVertical: 16, alignItems: 'center', marginTop: 20 },
-  btnText: { fontSize: 14, fontWeight: '900', color: '#000', fontFamily: mono, letterSpacing: 2 },
+  btnText: { fontSize: 14, fontWeight: '900', color: '#E8EAF0', fontFamily: mono, letterSpacing: 2 },
 });
