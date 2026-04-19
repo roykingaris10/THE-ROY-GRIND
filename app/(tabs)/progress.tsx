@@ -1,654 +1,314 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo, useCallback, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
-  Alert,
-  Share,
-  Dimensions,
+  RefreshControl,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LineChart } from 'react-native-chart-kit';
-import { COLORS, LIFT_COLORS } from '@/lib/constants';
 import { useAppData } from '@/hooks/useAppData';
 import { useCurrentProgram } from '@/hooks/useCurrentProgram';
-import { getDateString, getEstimated1RM } from '@/lib/helpers';
+import { COLORS, BENCHMARKS_REALISTIC, BENCHMARKS_STRETCH } from '@/lib/constants';
+import { getBestE1RM, getDateString, formatNumber } from '@/lib/helpers';
 import { Card, SectionLabel } from '@/components/Card';
-import { BenchmarkTable } from '@/components/BenchmarkTable';
 import { ProgressBar } from '@/components/ProgressBar';
-import { exportData } from '@/lib/storage';
-import type { LiftType, DailyEntry, LiftEntry } from '@/types';
+import { MiniChart } from '@/components/MiniChart';
+import { BenchmarkTable } from '@/components/BenchmarkTable';
+import type { LiftType } from '@/types';
 
 const mono = Platform.select({ ios: 'Menlo', default: 'monospace' });
-const screenWidth = Dimensions.get('window').width - 48;
 
-const chartConfig = {
-  backgroundGradientFrom: COLORS.card,
-  backgroundGradientTo: COLORS.card,
-  decimalPlaces: 1,
-  color: (opacity = 1) => `rgba(255, 59, 59, ${opacity})`,
-  labelColor: (opacity = 1) => `rgba(136, 136, 136, ${opacity})`,
-  propsForDots: { r: '3', strokeWidth: '1' },
-  propsForBackgroundLines: { stroke: COLORS.border, strokeDasharray: '' },
-  propsForLabels: { fontFamily: mono, fontSize: 9 },
-  strokeWidth: 2,
-};
-
-function EmptyChart({ message, height = 180 }: { message: string; height?: number }) {
-  return (
-    <View style={[styles.emptyChart, { height }]}>
-      <Text style={styles.emptyChartText}>{message}</Text>
-    </View>
-  );
-}
+const LIFT_DEFS: { key: LiftType; label: string; color: string; benchKey: 'sq' | 'bn' | 'dl' }[] = [
+  { key: 'squat', label: 'SQUAT', color: COLORS.squat, benchKey: 'sq' },
+  { key: 'bench', label: 'BENCH', color: COLORS.bench, benchKey: 'bn' },
+  { key: 'deadlift', label: 'DEADLIFT', color: COLORS.deadlift, benchKey: 'dl' },
+];
 
 export default function ProgressScreen() {
-  const { data, loading, resetAllData } = useAppData();
   const insets = useSafeAreaInsets();
-  const [liftChartType, setLiftChartType] = useState<LiftType>('squat');
-  const [weightRange, setWeightRange] = useState<'30d' | 'all'>('30d');
+  const { data, loading, refresh } = useAppData();
+  const [refreshing, setRefreshing] = useState(false);
 
-  const programStart = data?.settings?.programStart || '2026-04-14';
-  const program = useCurrentProgram(programStart);
+  const programStart = data?.settings?.programStart ?? '2026-04-14';
+  const showStretch = data?.settings?.showStretchTargets ?? false;
 
-  // Weight data sorted by date
-  const allWeightEntries = useMemo(
-    () =>
-      data
-        ? Object.values(data.entries)
-            .filter(e => e.weight != null)
-            .sort((a, b) => a.date.localeCompare(b.date))
-        : [],
-    [data]
-  );
+  const { week, benchmark } = useCurrentProgram(programStart, showStretch);
 
-  const weightData = useMemo(() => {
-    return weightRange === '30d' ? allWeightEntries.slice(-30) : allWeightEntries;
-  }, [allWeightEntries, weightRange]);
-
-  const liftData = useMemo(() => {
-    if (!data) return [] as LiftEntry[];
-    return data.lifts
-      .filter(l => l.type === liftChartType)
-      .sort((a, b) => a.date.localeCompare(b.date));
-  }, [data, liftChartType]);
-
-  // Last 14 days stats
-  const last14DaysStats = useMemo(() => {
-    const results = {
-      daysLogged: 0,
-      daysTrained: 0,
-      stepsTarget: 0,
-      proteinTarget: 0,
-      sleepTarget: 0,
-    };
-    if (!data) return results;
-
-    const today = new Date();
-    const trainedDates = new Set<string>();
-    data.lifts.forEach(l => trainedDates.add(l.date));
-
-    for (let i = 0; i < 14; i++) {
-      const d = new Date(today);
-      d.setDate(d.getDate() - i);
-      const key = getDateString(d);
-      const entry = data.entries[key];
-
-      if (entry && Object.keys(entry).length > 1) {
-        results.daysLogged++;
-      }
-      if (trainedDates.has(key)) {
-        results.daysTrained++;
-      }
-      if (entry?.steps && entry.steps >= 8000) results.stepsTarget++;
-      if (entry?.protein && entry.protein >= 220) results.proteinTarget++;
-      if (entry?.sleep && entry.sleep >= 7) results.sleepTarget++;
-    }
-
-    return results;
+  const weightHistory = useMemo(() => {
+    if (!data) return [] as number[];
+    return Object.values(data.entries)
+      .filter(e => e.weight != null)
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .map(e => e.weight!);
   }, [data]);
 
-  // Weekly summary (last 7 days)
-  const weeklySummary = useMemo(() => {
-    const empty = {
-      weight: null as number | null,
-      calories: null as number | null,
-      protein: null as number | null,
-      sleep: null as number | null,
-      recovery: null as number | null,
-      energy: null as number | null,
-      mood: null as number | null,
-      sessions: 0,
-      weightChange: null as number | null,
-    };
-    if (!data) return empty;
-
-    const today = new Date();
-    const current: DailyEntry[] = [];
-    const previous: DailyEntry[] = [];
-
-    for (let i = 0; i < 14; i++) {
-      const d = new Date(today);
-      d.setDate(d.getDate() - i);
-      const key = getDateString(d);
-      const entry = data.entries[key];
-      if (entry) {
-        if (i < 7) current.push(entry);
-        else previous.push(entry);
-      }
-    }
-
-    const avg = (arr: DailyEntry[], field: keyof DailyEntry): number | null => {
-      const vals = arr.map(e => e[field]).filter(v => typeof v === 'number') as number[];
-      if (vals.length === 0) return null;
-      return vals.reduce((a, b) => a + b, 0) / vals.length;
-    };
-
-    const trainedDates = new Set<string>();
-    data.lifts.forEach(l => trainedDates.add(l.date));
-
-    let sessions = 0;
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(today);
-      d.setDate(d.getDate() - i);
-      if (trainedDates.has(getDateString(d))) sessions++;
-    }
-
-    const curWeight = avg(current, 'weight');
-    const prevWeight = avg(previous, 'weight');
-
-    return {
-      weight: curWeight,
-      calories: avg(current, 'calories'),
-      protein: avg(current, 'protein'),
-      sleep: avg(current, 'sleep'),
-      recovery: avg(current, 'recovery'),
-      energy: avg(current, 'energy'),
-      mood: avg(current, 'mood'),
-      sessions,
-      weightChange: curWeight != null && prevWeight != null ? curWeight - prevWeight : null,
-    };
+  const latestWeight = useMemo(() => {
+    if (!data) return 130;
+    const withW = Object.values(data.entries)
+      .filter(e => e.weight != null)
+      .sort((a, b) => b.date.localeCompare(a.date));
+    return withW.length > 0 ? withW[0].weight! : data.profile.startingWeight;
   }, [data]);
 
-  // Build chart data for weight
-  const weightChartData = useMemo(() => {
-    if (weightData.length < 2) return null;
-    const labels = weightData.map((e, i) => {
-      if (i === 0 || i === weightData.length - 1 || i === Math.floor(weightData.length / 2)) {
-        const d = new Date(e.date + 'T00:00:00');
-        return `${d.getMonth() + 1}/${d.getDate()}`;
+  const liftProgress = useMemo(() => {
+    if (!data) return LIFT_DEFS.map(l => ({ ...l, best: 0, weeklyBests: [] as number[] }));
+    return LIFT_DEFS.map(lift => {
+      const best = getBestE1RM(data.sets, lift.key);
+      const weeklyBests: number[] = [];
+      for (let w = 1; w <= week; w++) {
+        const weekSets = data.sets.filter(s => s.week === w && s.liftType === lift.key && s.isMain);
+        if (weekSets.length > 0) {
+          const maxE1rm = Math.max(...weekSets.map(s => s.e1rm || 0));
+          if (maxE1rm > 0) weeklyBests.push(maxE1rm);
+        }
       }
-      return '';
+      return { ...lift, best, weeklyBests };
     });
-    const values = weightData.map(e => e.weight!);
+  }, [data, week]);
 
-    return {
-      labels,
-      datasets: [
-        {
-          data: values,
-          color: () => COLORS.primary,
-          strokeWidth: 2,
-        },
-      ],
-    };
-  }, [weightData]);
+  const totalE1RM = useMemo(() => {
+    return liftProgress.reduce((sum, l) => sum + l.best, 0);
+  }, [liftProgress]);
 
-  const liftChartData = useMemo(() => {
-    if (liftData.length < 2) return null;
-    const color = LIFT_COLORS[liftChartType];
-    const labels = liftData.map((l, i) => {
-      if (i === 0 || i === liftData.length - 1 || i === Math.floor(liftData.length / 2)) {
-        const d = new Date(l.date + 'T00:00:00');
-        return `${d.getMonth() + 1}/${d.getDate()}`;
-      }
-      return '';
-    });
-    const weights = liftData.map(l => l.weight);
-    const e1rms = liftData.map(l => l.e1rm || getEstimated1RM(l.weight, l.reps));
+  const calorieHistory = useMemo(() => {
+    if (!data) return [] as number[];
+    return Object.values(data.entries)
+      .filter(e => e.calories != null && e.calories! > 0)
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .slice(-28)
+      .map(e => e.calories!);
+  }, [data]);
 
-    return {
-      labels,
-      datasets: [
-        { data: weights, color: () => color, strokeWidth: 2 },
-        { data: e1rms, color: () => `${color}88`, strokeWidth: 1.5 },
-      ],
-      legend: ['Weight', 'E1RM'],
-    };
-  }, [liftData, liftChartType]);
+  const avgCalories = useMemo(() => {
+    if (calorieHistory.length === 0) return 0;
+    return Math.round(calorieHistory.reduce((a, b) => a + b, 0) / calorieHistory.length);
+  }, [calorieHistory]);
+
+  const sleepHistory = useMemo(() => {
+    if (!data) return [] as number[];
+    return Object.values(data.entries)
+      .filter(e => e.sleep != null)
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .slice(-14)
+      .map(e => e.sleep!);
+  }, [data]);
+
+  const avgSleep = useMemo(() => {
+    if (sleepHistory.length === 0) return 0;
+    return +(sleepHistory.reduce((a, b) => a + b, 0) / sleepHistory.length).toFixed(1);
+  }, [sleepHistory]);
+
+  const totalSessions = useMemo(() => {
+    if (!data) return 0;
+    return data.sessions.filter(s => s.completed).length;
+  }, [data]);
+
+  const totalSets = useMemo(() => {
+    if (!data) return 0;
+    return data.sets.filter(s => !s.isWarmup).length;
+  }, [data]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refresh();
+    setRefreshing(false);
+  }, [refresh]);
 
   if (loading || !data) {
     return (
-      <View style={[styles.screen, { paddingTop: insets.top }]}>
-        <Text style={styles.loadingText}>Loading...</Text>
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <ActivityIndicator color={COLORS.primary} size="large" style={{ marginTop: 80 }} />
       </View>
     );
   }
 
-  const { week, benchmark } = program;
-
-  const handleExport = async () => {
-    try {
-      const json = await exportData();
-      await Share.share({
-        message: json,
-        title: 'THE GRIND — Data Export',
-      });
-    } catch (e) {
-      Alert.alert('Error', 'Failed to export data');
-    }
-  };
-
-  const handleReset = () => {
-    Alert.alert(
-      'Reset All Data',
-      'This will permanently delete all entries, lifts, and settings. This cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Reset',
-          style: 'destructive',
-          onPress: async () => {
-            await resetAllData();
-            Alert.alert('Data Reset', 'All data has been cleared.');
-          },
-        },
-      ]
-    );
-  };
-
-  const liftBenchmark =
-    liftChartType === 'squat' ? benchmark.sq : liftChartType === 'bench' ? benchmark.bn : benchmark.dl;
+  const benchmarks = showStretch ? BENCHMARKS_STRETCH : BENCHMARKS_REALISTIC;
+  const finalBench = benchmarks[benchmarks.length - 1];
+  const finalTotal = finalBench.sq + finalBench.bn + finalBench.dl;
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top }]}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 24 }]}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} colors={[COLORS.primary]} />
+        }
       >
-        <Text style={styles.title}>PROGRESS</Text>
+        <Text style={styles.screenTitle}>PROGRESS</Text>
+        <Text style={styles.meta}>Week {week} / 32</Text>
 
-        {/* Weight Trend */}
-        <View style={styles.headerRow}>
-          <SectionLabel>WEIGHT TREND</SectionLabel>
-          <View style={styles.rangeRow}>
-            <TouchableOpacity
-              onPress={() => setWeightRange('30d')}
-              style={[styles.rangeBtn, weightRange === '30d' && styles.rangeBtnActive]}
-            >
-              <Text
-                style={[styles.rangeBtnText, weightRange === '30d' && styles.rangeBtnTextActive]}
-              >
-                30D
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setWeightRange('all')}
-              style={[styles.rangeBtn, weightRange === 'all' && styles.rangeBtnActive]}
-            >
-              <Text
-                style={[styles.rangeBtnText, weightRange === 'all' && styles.rangeBtnTextActive]}
-              >
-                ALL
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-        <Card delay={0}>
-          {weightChartData ? (
-            <View>
-              <LineChart
-                data={weightChartData}
-                width={screenWidth}
-                height={180}
-                chartConfig={chartConfig}
-                bezier
-                style={{ marginLeft: -16, borderRadius: 8 }}
-                withInnerLines
-                withOuterLines={false}
-                fromZero={false}
-              />
-              <View style={styles.chartLegend}>
-                <Text style={styles.legendItem}>
-                  <Text style={{ color: COLORS.primary }}>— </Text>Weight
-                </Text>
-                <Text style={styles.legendItem}>
-                  Benchmark: {benchmark.bw}kg | Goal: 100kg
-                </Text>
-              </View>
-            </View>
-          ) : (
-            <EmptyChart message="Log at least 2 weight entries to see trend" />
-          )}
-        </Card>
+        <ProgressBar progress={week / 32} color={COLORS.primary} height={6} showLabel label={`${Math.round((week / 32) * 100)}% complete`} />
 
-        {/* Lift Trend */}
-        <SectionLabel>LIFT TREND</SectionLabel>
-        <View style={styles.pillRow}>
-          {(['squat', 'bench', 'deadlift'] as LiftType[]).map(t => (
-            <TouchableOpacity
-              key={t}
-              onPress={() => setLiftChartType(t)}
-              style={[
-                styles.liftTabBtn,
-                {
-                  backgroundColor: liftChartType === t ? LIFT_COLORS[t] : 'transparent',
-                  borderColor: LIFT_COLORS[t],
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.liftTabText,
-                  { color: liftChartType === t ? '#000' : LIFT_COLORS[t] },
-                ]}
-              >
-                {t.toUpperCase()}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        {/* Stats Overview */}
+        <SectionLabel>STATS</SectionLabel>
         <Card delay={50}>
-          {liftChartData ? (
-            <View>
-              <LineChart
-                data={liftChartData}
-                width={screenWidth}
-                height={180}
-                chartConfig={{
-                  ...chartConfig,
-                  color: () => LIFT_COLORS[liftChartType],
-                }}
-                bezier
-                style={{ marginLeft: -16, borderRadius: 8 }}
-                withInnerLines
-                withOuterLines={false}
-                fromZero={false}
-              />
-              <View style={styles.chartLegend}>
-                <Text style={styles.legendItem}>
-                  <Text style={{ color: LIFT_COLORS[liftChartType] }}>— </Text>Weight
-                </Text>
-                <Text style={styles.legendItem}>
-                  Benchmark: {liftBenchmark}kg
-                </Text>
-              </View>
-            </View>
-          ) : (
-            <EmptyChart message={`Log at least 2 ${liftChartType} entries to see trend`} />
-          )}
+          <View style={styles.statsGrid}>
+            <StatBox label="SESSIONS" value={String(totalSessions)} />
+            <StatBox label="TOTAL SETS" value={formatNumber(totalSets)} />
+            <StatBox label="WEEK" value={`${week}/32`} />
+            <StatBox label="AVG KCAL" value={avgCalories > 0 ? formatNumber(avgCalories) : '--'} />
+          </View>
         </Card>
 
-        {/* Benchmarks Table */}
-        <SectionLabel>MONTHLY BENCHMARKS</SectionLabel>
+        {/* Bodyweight Trend */}
+        <SectionLabel>BODYWEIGHT TREND</SectionLabel>
         <Card delay={100}>
-          <BenchmarkTable currentWeek={week} />
+          <View style={styles.trendRow}>
+            <View>
+              <Text style={styles.trendValue}>{latestWeight.toFixed(1)} kg</Text>
+              <Text style={styles.trendSub}>Current</Text>
+            </View>
+            <View style={{ alignItems: 'flex-end' }}>
+              <Text style={styles.trendTarget}>{benchmark.bw} kg</Text>
+              <Text style={styles.trendSub}>Week {week} Target</Text>
+            </View>
+          </View>
+          {weightHistory.length > 2 && (
+            <View style={styles.chartContainer}>
+              <MiniChart data={weightHistory.slice(-28)} color={COLORS.primary} height={60} width={300} />
+            </View>
+          )}
+          <ProgressBar
+            progress={130 > 100 ? Math.max(0, Math.min(1, (130 - latestWeight) / (130 - 100))) : 0}
+            color={COLORS.primary}
+            height={4}
+            showLabel
+            label={`130 -> ${finalBench.bw} kg`}
+          />
         </Card>
 
-        {/* Consistency Scorecard */}
-        <SectionLabel>CONSISTENCY — LAST 14 DAYS</SectionLabel>
-        <Card delay={150}>
-          <View style={styles.scoreRow}>
-            <Text style={styles.scoreLabel}>Days logged</Text>
-            <Text style={styles.scoreValue}>{last14DaysStats.daysLogged}/14</Text>
-          </View>
-          <ProgressBar progress={last14DaysStats.daysLogged / 14} color={COLORS.primary} />
+        {/* Lift E1RM Progress */}
+        <SectionLabel>LIFT E1RM PROGRESS</SectionLabel>
+        {liftProgress.map(lift => (
+          <Card key={lift.key} delay={150} borderColor={lift.color}>
+            <View style={styles.liftHeader}>
+              <Text style={[styles.liftName, { color: lift.color }]}>{lift.label}</Text>
+              <Text style={styles.liftBest}>
+                {lift.best > 0 ? `${lift.best} kg` : '--'}
+              </Text>
+            </View>
+            <Text style={styles.liftTargetText}>
+              Week {week} target: {benchmark[lift.benchKey]} kg
+              {lift.best > 0 ? ` (${Math.round((lift.best / benchmark[lift.benchKey]) * 100)}%)` : ''}
+            </Text>
+            {lift.weeklyBests.length > 1 && (
+              <View style={styles.chartContainer}>
+                <MiniChart data={lift.weeklyBests} color={lift.color} height={40} width={280} />
+              </View>
+            )}
+            <ProgressBar
+              progress={finalBench[lift.benchKey] > 0 ? lift.best / finalBench[lift.benchKey] : 0}
+              color={lift.color}
+              height={4}
+              showLabel
+              label={`0 -> ${finalBench[lift.benchKey]} kg`}
+            />
+          </Card>
+        ))}
 
-          <View style={[styles.scoreRow, { marginTop: 12 }]}>
-            <Text style={styles.scoreLabel}>Days trained</Text>
-            <Text style={styles.scoreValue}>{last14DaysStats.daysTrained}/14</Text>
-          </View>
-          <ProgressBar progress={last14DaysStats.daysTrained / 14} color={COLORS.squat} />
-
-          <View style={[styles.scoreRow, { marginTop: 12 }]}>
-            <Text style={styles.scoreLabel}>Steps ≥ 8,000</Text>
-            <Text style={styles.scoreValue}>{last14DaysStats.stepsTarget}/14</Text>
-          </View>
-          <ProgressBar progress={last14DaysStats.stepsTarget / 14} color={COLORS.success} />
-
-          <View style={[styles.scoreRow, { marginTop: 12 }]}>
-            <Text style={styles.scoreLabel}>Protein ≥ 220g</Text>
-            <Text style={styles.scoreValue}>{last14DaysStats.proteinTarget}/14</Text>
-          </View>
-          <ProgressBar progress={last14DaysStats.proteinTarget / 14} color={COLORS.bench} />
-
-          <View style={[styles.scoreRow, { marginTop: 12 }]}>
-            <Text style={styles.scoreLabel}>Sleep ≥ 7hrs</Text>
-            <Text style={styles.scoreValue}>{last14DaysStats.sleepTarget}/14</Text>
-          </View>
-          <ProgressBar progress={last14DaysStats.sleepTarget / 14} color={COLORS.deadlift} />
-        </Card>
-
-        {/* Weekly Summary */}
-        <SectionLabel>THIS WEEK</SectionLabel>
+        {/* Estimated Total */}
+        <SectionLabel>ESTIMATED TOTAL</SectionLabel>
         <Card delay={200}>
-          <View style={styles.summaryGrid}>
-            <SummaryItem
-              label="AVG WEIGHT"
-              value={weeklySummary.weight ? `${weeklySummary.weight.toFixed(1)}kg` : '--'}
-            />
-            <SummaryItem
-              label="WEIGHT Δ"
-              value={
-                weeklySummary.weightChange != null
-                  ? `${weeklySummary.weightChange > 0 ? '+' : ''}${weeklySummary.weightChange.toFixed(1)}kg`
-                  : '--'
-              }
-              color={
-                weeklySummary.weightChange != null && weeklySummary.weightChange < 0
-                  ? COLORS.success
-                  : undefined
-              }
-            />
-            <SummaryItem
-              label="AVG KCAL"
-              value={weeklySummary.calories ? Math.round(weeklySummary.calories).toString() : '--'}
-            />
-            <SummaryItem
-              label="AVG PROTEIN"
-              value={weeklySummary.protein ? `${Math.round(weeklySummary.protein)}g` : '--'}
-            />
-            <SummaryItem
-              label="AVG SLEEP"
-              value={weeklySummary.sleep ? `${weeklySummary.sleep.toFixed(1)}h` : '--'}
-            />
-            <SummaryItem label="SESSIONS" value={`${weeklySummary.sessions}/7`} />
-            <SummaryItem
-              label="AVG RECOVERY"
-              value={weeklySummary.recovery ? `${weeklySummary.recovery.toFixed(1)}` : '--'}
-            />
-            <SummaryItem
-              label="AVG ENERGY"
-              value={weeklySummary.energy ? `${weeklySummary.energy.toFixed(1)}` : '--'}
-            />
-            <SummaryItem
-              label="AVG MOOD"
-              value={weeklySummary.mood ? `${weeklySummary.mood.toFixed(1)}` : '--'}
-            />
+          <View style={styles.trendRow}>
+            <View>
+              <Text style={[styles.trendValue, { color: COLORS.primary }]}>
+                {totalE1RM > 0 ? `${totalE1RM} kg` : '--'}
+              </Text>
+              <Text style={styles.trendSub}>SQ + BN + DL</Text>
+            </View>
+            <View style={{ alignItems: 'flex-end' }}>
+              <Text style={styles.trendTarget}>{finalTotal} kg</Text>
+              <Text style={styles.trendSub}>Final Target</Text>
+            </View>
           </View>
+          <ProgressBar
+            progress={totalE1RM > 0 ? totalE1RM / finalTotal : 0}
+            color={COLORS.primary}
+            height={5}
+            showLabel
+            label={`${totalE1RM > 0 ? Math.round((totalE1RM / finalTotal) * 100) : 0}% of ${finalTotal}`}
+          />
         </Card>
 
-        {/* Data Management */}
-        <SectionLabel>DATA</SectionLabel>
-        <Card delay={250}>
-          <TouchableOpacity style={styles.ghostBtn} onPress={handleExport}>
-            <Text style={styles.ghostBtnText}>EXPORT DATA</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.ghostBtn, { borderColor: COLORS.danger, marginTop: 8 }]}
-            onPress={handleReset}
-          >
-            <Text style={[styles.ghostBtnText, { color: COLORS.danger }]}>RESET ALL DATA</Text>
-          </TouchableOpacity>
-        </Card>
+        {/* Sleep */}
+        {sleepHistory.length > 0 && (
+          <>
+            <SectionLabel>SLEEP</SectionLabel>
+            <Card delay={250}>
+              <View style={styles.trendRow}>
+                <View>
+                  <Text style={styles.trendValue}>{avgSleep}h</Text>
+                  <Text style={styles.trendSub}>Avg (last 14d)</Text>
+                </View>
+              </View>
+              {sleepHistory.length > 2 && (
+                <View style={styles.chartContainer}>
+                  <MiniChart data={sleepHistory} color={COLORS.success} height={40} width={280} />
+                </View>
+              )}
+            </Card>
+          </>
+        )}
 
-        <View style={{ height: 40 }} />
+        {/* Calorie Trend */}
+        {calorieHistory.length > 0 && (
+          <>
+            <SectionLabel>CALORIE TREND (28D)</SectionLabel>
+            <Card delay={300}>
+              <View style={styles.trendRow}>
+                <View>
+                  <Text style={[styles.trendValue, { color: COLORS.caloriesIn }]}>{formatNumber(avgCalories)}</Text>
+                  <Text style={styles.trendSub}>Avg kcal/day</Text>
+                </View>
+              </View>
+              {calorieHistory.length > 2 && (
+                <View style={styles.chartContainer}>
+                  <MiniChart data={calorieHistory} color={COLORS.caloriesIn} height={40} width={280} />
+                </View>
+              )}
+            </Card>
+          </>
+        )}
+
+        {/* Benchmark Table */}
+        <SectionLabel>BENCHMARK TABLE</SectionLabel>
+        <BenchmarkTable currentWeek={week} stretch={showStretch} />
       </ScrollView>
     </View>
   );
 }
 
-function SummaryItem({ label, value, color }: { label: string; value: string; color?: string }) {
+function StatBox({ label, value }: { label: string; value: string }) {
   return (
-    <View style={styles.summaryItem}>
-      <Text style={styles.summaryLabel}>{label}</Text>
-      <Text style={[styles.summaryValue, color ? { color } : undefined]}>{value}</Text>
+    <View style={styles.statBox}>
+      <Text style={styles.statLabel}>{label}</Text>
+      <Text style={styles.statValue}>{value}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  scroll: {
-    flex: 1,
-  },
-  content: {
-    padding: 16,
-  },
-  loadingText: {
-    color: COLORS.textMuted,
-    fontFamily: mono,
-    fontSize: 14,
-    textAlign: 'center',
-    marginTop: 100,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: COLORS.textPrimary,
-    fontFamily: mono,
-    letterSpacing: 3,
-    marginBottom: 16,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  rangeRow: {
-    flexDirection: 'row',
-    gap: 4,
-  },
-  rangeBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderWidth: 1,
-    borderColor: COLORS.ghostBorder,
-    borderRadius: 4,
-  },
-  rangeBtnActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  rangeBtnText: {
-    fontSize: 9,
-    color: COLORS.textSecondary,
-    fontFamily: mono,
-    fontWeight: '700',
-    letterSpacing: 1,
-  },
-  rangeBtnTextActive: {
-    color: '#fff',
-  },
-  chartLegend: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 8,
-  },
-  legendItem: {
-    fontSize: 10,
-    color: COLORS.textSecondary,
-    fontFamily: mono,
-  },
-  pillRow: {
-    flexDirection: 'row',
-    marginBottom: 8,
-    gap: 6,
-  },
-  liftTabBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
-  },
-  liftTabText: {
-    fontSize: 11,
-    fontFamily: mono,
-    fontWeight: '700',
-    letterSpacing: 1,
-  },
-  emptyChart: {
-    backgroundColor: COLORS.background,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyChartText: {
-    fontSize: 12,
-    color: COLORS.textMuted,
-    fontFamily: mono,
-    textAlign: 'center',
-    paddingHorizontal: 24,
-  },
-  scoreRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 6,
-  },
-  scoreLabel: {
-    fontSize: 11,
-    color: COLORS.textSecondary,
-    fontFamily: mono,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  scoreValue: {
-    fontSize: 12,
-    color: COLORS.textPrimary,
-    fontFamily: mono,
-    fontWeight: '700',
-  },
-  summaryGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  summaryItem: {
-    width: '33%',
-    marginBottom: 16,
-  },
-  summaryLabel: {
-    fontSize: 9,
-    color: COLORS.label,
-    fontFamily: mono,
-    letterSpacing: 1,
-    marginBottom: 4,
-  },
-  summaryValue: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-    fontFamily: mono,
-  },
-  ghostBtn: {
-    borderWidth: 1,
-    borderColor: COLORS.ghostBorder,
-    borderRadius: 8,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  ghostBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: COLORS.ghostText,
-    fontFamily: mono,
-    letterSpacing: 1.5,
-  },
+  container: { flex: 1, backgroundColor: COLORS.background },
+  scroll: { flex: 1 },
+  scrollContent: { paddingHorizontal: 16, paddingTop: 8 },
+  screenTitle: { fontSize: 24, fontWeight: '900', color: COLORS.textPrimary, fontFamily: mono, letterSpacing: 3, marginTop: 12 },
+  meta: { fontSize: 11, color: COLORS.textSecondary, fontFamily: mono, marginTop: 4, marginBottom: 16 },
+  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  statBox: { flex: 1, minWidth: '40%', alignItems: 'center', paddingVertical: 10, backgroundColor: COLORS.background, borderRadius: 8 },
+  statLabel: { fontSize: 9, color: COLORS.label, fontFamily: mono, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 4 },
+  statValue: { fontSize: 18, fontWeight: '900', color: COLORS.textPrimary, fontFamily: mono },
+  trendRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  trendValue: { fontSize: 24, fontWeight: '900', color: COLORS.textPrimary, fontFamily: mono },
+  trendSub: { fontSize: 10, color: COLORS.textMuted, fontFamily: mono, marginTop: 2 },
+  trendTarget: { fontSize: 16, fontWeight: '700', color: COLORS.textSecondary, fontFamily: mono },
+  chartContainer: { alignItems: 'center', marginVertical: 12 },
+  liftHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  liftName: { fontSize: 14, fontWeight: '900', fontFamily: mono, letterSpacing: 2 },
+  liftBest: { fontSize: 20, fontWeight: '900', color: COLORS.textPrimary, fontFamily: mono },
+  liftTargetText: { fontSize: 10, color: COLORS.textMuted, fontFamily: mono, marginBottom: 8 },
 });

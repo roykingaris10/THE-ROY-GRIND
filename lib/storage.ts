@@ -1,20 +1,30 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { AppData, DailyEntry, LiftEntry } from '@/types';
+import type { AppData, DailyEntry, SetLog, WorkoutSession } from '@/types';
 import { PROGRAM_START_DEFAULT } from './constants';
 import { getEstimated1RM } from './helpers';
 
-const STORAGE_KEY = 'grind-data-v1';
+const STORAGE_KEY = 'royforge-data-v1';
 
 let saveTimeout: ReturnType<typeof setTimeout> | null = null;
 
 function getDefaultData(): AppData {
   return {
+    profile: {
+      age: 24,
+      sex: 'male',
+      heightCm: 180,
+      startingWeight: 130,
+    },
     entries: {},
-    lifts: [],
+    sets: [],
+    sessions: [],
     settings: {
       programStart: PROGRAM_START_DEFAULT,
       reminderEnabled: false,
       reminderTime: '21:00',
+      showStretchTargets: false,
+      autoSyncSteps: true,
+      defaultEbikeMinutesPerDay: 20,
       onboardingComplete: false,
     },
   };
@@ -25,14 +35,11 @@ export async function loadData(): Promise<AppData> {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as AppData;
-      // Ensure all fields exist with defaults
       return {
         ...getDefaultData(),
         ...parsed,
-        settings: {
-          ...getDefaultData().settings,
-          ...parsed.settings,
-        },
+        profile: { ...getDefaultData().profile, ...parsed.profile },
+        settings: { ...getDefaultData().settings, ...parsed.settings },
       };
     }
     return getDefaultData();
@@ -48,63 +55,44 @@ export async function saveData(data: AppData): Promise<void> {
       try {
         await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(data));
       } catch (e) {
-        console.error('Failed to save data:', e);
+        console.error('Failed to save:', e);
       }
       resolve();
     }, 500);
   });
 }
 
-export async function saveDataImmediate(data: AppData): Promise<void> {
+export async function saveImmediate(data: AppData): Promise<void> {
   if (saveTimeout) clearTimeout(saveTimeout);
   try {
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   } catch (e) {
-    console.error('Failed to save data:', e);
+    console.error('Failed to save:', e);
   }
 }
 
-export async function updateEntry(
-  data: AppData,
-  date: string,
-  updates: Partial<DailyEntry>
-): Promise<AppData> {
-  const existing = data.entries[date] || { date };
-  const newData: AppData = {
-    ...data,
-    entries: {
-      ...data.entries,
-      [date]: { ...existing, ...updates, date },
-    },
-  };
-  await saveData(newData);
-  return newData;
-}
+export function addSetToData(data: AppData, set: Omit<SetLog, 'id' | 'e1rm' | 'isPR'>): { data: AppData; entry: SetLog } {
+  const e1rm = getEstimated1RM(set.weight, set.reps);
+  let isPR = false;
 
-export async function addLift(
-  data: AppData,
-  lift: Omit<LiftEntry, 'id' | 'e1rm'>
-): Promise<{ data: AppData; entry: LiftEntry }> {
-  const entry: LiftEntry = {
-    ...lift,
-    id: Date.now().toString(),
-    e1rm: getEstimated1RM(lift.weight, lift.reps),
-  };
-  const newData: AppData = {
-    ...data,
-    lifts: [...data.lifts, entry],
-  };
-  await saveData(newData);
-  return { data: newData, entry };
-}
+  if (set.isMain && set.liftType) {
+    const prevBest = Math.max(0, ...data.sets
+      .filter(s => s.liftType === set.liftType && s.isMain)
+      .map(s => s.e1rm || 0));
+    isPR = e1rm > prevBest && prevBest > 0;
+  }
 
-export async function deleteLift(data: AppData, id: string): Promise<AppData> {
-  const newData: AppData = {
-    ...data,
-    lifts: data.lifts.filter(l => l.id !== id),
+  const entry: SetLog = {
+    ...set,
+    id: Date.now().toString() + Math.random().toString(36).slice(2, 6),
+    e1rm,
+    isPR,
   };
-  await saveData(newData);
-  return newData;
+
+  return {
+    data: { ...data, sets: [...data.sets, entry] },
+    entry,
+  };
 }
 
 export async function clearAllData(): Promise<void> {

@@ -1,47 +1,85 @@
+export interface UserProfile {
+  age: number;
+  sex: 'male' | 'female';
+  heightCm: number;
+  startingWeight: number;
+}
+
 export interface DailyEntry {
-  date: string; // YYYY-MM-DD
-  weight?: number; // kg, 1 decimal
-  waist?: number; // cm, 0.5 precision
+  date: string;
+  weight?: number;
+  waist?: number;
   calories?: number;
-  protein?: number; // grams
+  protein?: number;
   carbs?: number;
   fat?: number;
   steps?: number;
-  cycling?: number; // minutes
-  sleep?: number; // hours, 0.5 precision
-  restingHR?: number; // bpm
-  recovery?: number; // 1-10
-  energy?: number; // 1-10
-  mood?: number; // 1-10
+  stepsAutoSynced?: boolean;
+  ebikeMinutes?: number;
+  otherCardioKcal?: number;
+  otherCardioNotes?: string;
+  sleep?: number;
+  restingHR?: number;
+  hrv?: number;
+  recovery?: number;
+  energy?: number;
+  mood?: number;
   notes?: string;
 }
 
-export interface LiftEntry {
+export interface SetLog {
   id: string;
-  date: string; // YYYY-MM-DD
-  type: 'squat' | 'bench' | 'deadlift';
-  weight: number; // kg
+  date: string;
+  week: number;
+  dayIndex: number;
+  exerciseId: string;
+  exerciseName: string;
+  liftType?: 'squat' | 'bench' | 'deadlift' | null;
+  isMain?: boolean;
+  setNumber: number;
+  weight: number;
   reps: number;
-  sets: number;
-  rpe: number; // 6-10, 0.5 increments
+  rpe?: number;
   notes?: string;
-  e1rm?: number; // calculated: weight * (1 + reps/30)
+  e1rm?: number;
+  isPR?: boolean;
+  isWarmup?: boolean;
+}
+
+export interface WorkoutSession {
+  id: string;
+  date: string;
+  week: number;
+  dayIndex: number;
+  workoutName: string;
+  startTime?: string;
+  endTime?: string;
+  completed: boolean;
+  completionPercent: number;
+  estimatedBurnKcal?: number;
+  notes?: string;
 }
 
 export interface AppSettings {
   programStart: string;
   reminderEnabled: boolean;
   reminderTime: string;
+  showStretchTargets: boolean;
+  autoSyncSteps: boolean;
+  defaultEbikeMinutesPerDay: number;
   onboardingComplete: boolean;
 }
 
 export interface AppData {
+  profile: UserProfile;
   entries: Record<string, DailyEntry>;
-  lifts: LiftEntry[];
+  sets: SetLog[];
+  sessions: WorkoutSession[];
   settings: AppSettings;
 }
 
 export type LiftType = 'squat' | 'bench' | 'deadlift';
+export type SessionType = 'heavy' | 'volume' | 'light' | 'deload';
 
 export interface Block {
   name: string;
@@ -68,4 +106,30 @@ export interface NutritionPhase {
   protein: [number, number];
   carbs: [number, number];
   fat: [number, number];
+}
+
+export interface TDEEBreakdown {
+  bmr: number;
+  steps: number;
+  ebike: number;
+  training: number;
+  other: number;
+  total: number;
+}
+
+export interface Exercise {
+  id: string;
+  name: string;
+  sets: number;
+  reps: string;
+  rpe?: string;
+  liftType?: LiftType;
+  isMain?: boolean;
+  notes?: string;
+}
+
+export interface WorkoutDay {
+  dayIndex: number;
+  name: string;
+  exercises: Exercise[];
 }

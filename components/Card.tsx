@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Animated } from 'react-native';
+import { View, StyleSheet, Animated, Text } from 'react-native';
 import { COLORS } from '@/lib/constants';
 
 interface CardProps {
@@ -15,29 +15,14 @@ export function Card({ children, style, delay = 0, borderColor }: CardProps) {
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(opacity, {
-        toValue: 1,
-        duration: 300,
-        delay,
-        useNativeDriver: true,
-      }),
-      Animated.timing(translateY, {
-        toValue: 0,
-        duration: 300,
-        delay,
-        useNativeDriver: true,
-      }),
+      Animated.timing(opacity, { toValue: 1, duration: 300, delay, useNativeDriver: true }),
+      Animated.timing(translateY, { toValue: 0, duration: 300, delay, useNativeDriver: true }),
     ]).start();
   }, [delay]);
 
   return (
     <Animated.View
-      style={[
-        styles.card,
-        { opacity, transform: [{ translateY }] },
-        borderColor ? { borderColor } : undefined,
-        style,
-      ]}
+      style={[styles.card, { opacity, transform: [{ translateY }] }, borderColor ? { borderColor } : undefined, style]}
     >
       {children}
     </Animated.View>
@@ -47,7 +32,7 @@ export function Card({ children, style, delay = 0, borderColor }: CardProps) {
 export function SectionLabel({ children }: { children: string }) {
   return (
     <View style={styles.labelContainer}>
-      <Animated.Text style={styles.label}>{children}</Animated.Text>
+      <Text style={styles.label}>{children}</Text>
     </View>
   );
 }
@@ -61,10 +46,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
   },
-  labelContainer: {
-    marginBottom: 8,
-    marginTop: 4,
-  },
+  labelContainer: { marginBottom: 8, marginTop: 4 },
   label: {
     fontSize: 10,
     textTransform: 'uppercase',

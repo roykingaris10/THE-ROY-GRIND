@@ -1,25 +1,28 @@
 {
   "expo": {
-    "name": "THE GRIND",
-    "slug": "the-grind",
+    "name": "RoyForge",
+    "slug": "royforge",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "thegrind",
+    "scheme": "royforge",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#111111"
+      "backgroundColor": "#0F0F0F"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSMotionUsageDescription": "RoyForge uses motion data to count your daily steps."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#111111"
+        "backgroundColor": "#0F0F0F"
       },
       "edgeToEdgeEnabled": true
     },
@@ -35,7 +38,8 @@
         {
           "icon": "./assets/images/icon.png"
         }
-      ]
+      ],
+      "expo-sensors"
     ],
     "experiments": {
       "typedRoutes": true

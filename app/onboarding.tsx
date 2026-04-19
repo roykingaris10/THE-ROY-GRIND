@@ -1,13 +1,5 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  TextInput,
-  ScrollView,
-  Platform,
-} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -20,172 +12,116 @@ const mono = Platform.select({ ios: 'Menlo', default: 'monospace' });
 export default function OnboardingScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { updateSettings, addLift, updateEntry } = useAppData();
+  const { updateSettings, updateProfile, addSet, updateEntry } = useAppData();
 
   const [step, setStep] = useState(0);
-  const [startDate, setStartDate] = useState(getDateString(new Date()));
+  const [age, setAge] = useState('24');
+  const [sex, setSex] = useState<'male' | 'female'>('male');
+  const [height, setHeight] = useState('180');
   const [startWeight, setStartWeight] = useState('130');
-  const [startSquat, setStartSquat] = useState('150');
-  const [startBench, setStartBench] = useState('105');
-  const [startDeadlift, setStartDeadlift] = useState('210');
+  const [startDate, setStartDate] = useState(getDateString(new Date()));
+  const [squat, setSquat] = useState('150');
+  const [bench, setBench] = useState('105');
+  const [deadlift, setDeadlift] = useState('210');
+  const [useStretch, setUseStretch] = useState(false);
+  const [ebikeDefault, setEbikeDefault] = useState('20');
+  const [ebikeEnabled, setEbikeEnabled] = useState(true);
+  const [reminderEnabled, setReminderEnabled] = useState(true);
+  const [reminderTime, setReminderTime] = useState('21:00');
 
-  const handleNext = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setStep(step + 1);
-  };
+  const next = () => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setStep(s => s + 1); };
 
-  const handleFinish = async () => {
+  const finish = async () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-    // Save settings
+    await updateProfile({ age: parseInt(age), sex, heightCm: parseInt(height), startingWeight: parseFloat(startWeight) });
     await updateSettings({
       programStart: startDate,
+      showStretchTargets: useStretch,
+      defaultEbikeMinutesPerDay: ebikeEnabled ? parseInt(ebikeDefault) || 20 : 0,
+      reminderEnabled,
+      reminderTime,
       onboardingComplete: true,
     });
-
-    // Save starting weight
-    if (parseFloat(startWeight) > 0) {
-      await updateEntry(startDate, { weight: parseFloat(startWeight) });
-    }
-
-    // Save starting lifts (one-off baseline entries)
-    const sq = parseFloat(startSquat);
-    const bn = parseFloat(startBench);
-    const dl = parseFloat(startDeadlift);
-
-    if (sq > 0) {
-      await addLift({ date: startDate, type: 'squat', weight: sq, reps: 1, sets: 1, rpe: 9 });
-    }
-    if (bn > 0) {
-      await addLift({ date: startDate, type: 'bench', weight: bn, reps: 1, sets: 1, rpe: 9 });
-    }
-    if (dl > 0) {
-      await addLift({ date: startDate, type: 'deadlift', weight: dl, reps: 1, sets: 1, rpe: 9 });
-    }
-
+    if (parseFloat(startWeight) > 0) await updateEntry(startDate, { weight: parseFloat(startWeight) });
+    const sq = parseFloat(squat); const bn = parseFloat(bench); const dl = parseFloat(deadlift);
+    if (sq > 0) await addSet({ date: startDate, week: 1, dayIndex: 0, exerciseId: 'baseline-sq', exerciseName: 'Back Squat', liftType: 'squat', isMain: true, setNumber: 1, weight: sq, reps: 1, rpe: 9 });
+    if (bn > 0) await addSet({ date: startDate, week: 1, dayIndex: 0, exerciseId: 'baseline-bn', exerciseName: 'Bench Press', liftType: 'bench', isMain: true, setNumber: 1, weight: bn, reps: 1, rpe: 9 });
+    if (dl > 0) await addSet({ date: startDate, week: 1, dayIndex: 0, exerciseId: 'baseline-dl', exerciseName: 'Conventional Deadlift', liftType: 'deadlift', isMain: true, setNumber: 1, weight: dl, reps: 1, rpe: 9 });
     router.replace('/(tabs)');
   };
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 20 }]}>
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
-      >
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {step === 0 && (
           <View style={styles.centered}>
-            <Text style={styles.huge}>THE GRIND</Text>
+            <Text style={styles.huge}>ROYFORGE</Text>
             <View style={styles.divider} />
-            <Text style={styles.tagline}>32 WEEKS TO 610KG</Text>
-            <Text style={styles.subtagline}>130 → 100 | 465 → 610</Text>
-            <View style={{ height: 60 }} />
-            <Text style={styles.description}>
-              An 8-month body recomposition & strength tracker. Log daily. Train smart. Measure everything. No excuses.
-            </Text>
+            <Text style={styles.tagline}>FORGE THE TOTAL</Text>
+            <Text style={styles.sub}>32 weeks | 130→100 | 465→590+</Text>
             <View style={{ height: 40 }} />
-            <TouchableOpacity style={styles.primaryBtn} onPress={handleNext}>
-              <Text style={styles.primaryBtnText}>LET'S GO</Text>
-            </TouchableOpacity>
+            <Text style={styles.desc}>Body recomposition & strength tracker with a full calorie expenditure engine. Log daily. Train smart. Measure everything.</Text>
+            <View style={{ height: 40 }} />
+            <TouchableOpacity style={styles.btn} onPress={next}><Text style={styles.btnText}>LET'S GO</Text></TouchableOpacity>
           </View>
         )}
 
         {step === 1 && (
           <View>
-            <Text style={styles.stepLabel}>STEP 1 / 3</Text>
-            <Text style={styles.stepTitle}>PROGRAM START DATE</Text>
-            <Text style={styles.stepDescription}>
-              When does your 32-week cycle begin? Usually today.
-            </Text>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>START DATE (YYYY-MM-DD)</Text>
-              <TextInput
-                style={styles.textInput}
-                value={startDate}
-                onChangeText={setStartDate}
-                placeholder="2026-04-14"
-                placeholderTextColor={COLORS.textMuted}
-              />
+            <Text style={styles.stepLabel}>1 / 4 — PROFILE</Text>
+            <Text style={styles.stepTitle}>PHYSICAL PROFILE</Text>
+            <InputRow label="AGE" value={age} onChange={setAge} kbd="number-pad" />
+            <Text style={styles.fieldLabel}>SEX</Text>
+            <View style={styles.pillRow}>
+              <TouchableOpacity onPress={() => setSex('male')} style={[styles.pill, sex === 'male' && styles.pillActive]}><Text style={[styles.pillText, sex === 'male' && styles.pillTextActive]}>MALE</Text></TouchableOpacity>
+              <TouchableOpacity onPress={() => setSex('female')} style={[styles.pill, sex === 'female' && styles.pillActive]}><Text style={[styles.pillText, sex === 'female' && styles.pillTextActive]}>FEMALE</Text></TouchableOpacity>
             </View>
-
-            <TouchableOpacity style={styles.primaryBtn} onPress={handleNext}>
-              <Text style={styles.primaryBtnText}>NEXT</Text>
-            </TouchableOpacity>
+            <InputRow label="HEIGHT (CM)" value={height} onChange={setHeight} kbd="number-pad" />
+            <InputRow label="STARTING WEIGHT (KG)" value={startWeight} onChange={setStartWeight} kbd="decimal-pad" />
+            <InputRow label="START DATE (YYYY-MM-DD)" value={startDate} onChange={setStartDate} />
+            <TouchableOpacity style={styles.btn} onPress={next}><Text style={styles.btnText}>NEXT</Text></TouchableOpacity>
           </View>
         )}
 
         {step === 2 && (
           <View>
-            <Text style={styles.stepLabel}>STEP 2 / 3</Text>
-            <Text style={styles.stepTitle}>STARTING WEIGHT</Text>
-            <Text style={styles.stepDescription}>Current bodyweight in kilograms.</Text>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>WEIGHT (KG)</Text>
-              <TextInput
-                style={styles.textInput}
-                value={startWeight}
-                onChangeText={setStartWeight}
-                keyboardType="decimal-pad"
-                placeholder="130"
-                placeholderTextColor={COLORS.textMuted}
-              />
+            <Text style={styles.stepLabel}>2 / 4 — STARTING LIFTS</Text>
+            <Text style={styles.stepTitle}>CURRENT 1RMs (KG)</Text>
+            <InputRow label="SQUAT" value={squat} onChange={setSquat} kbd="decimal-pad" color={COLORS.squat} />
+            <InputRow label="BENCH" value={bench} onChange={setBench} kbd="decimal-pad" color={COLORS.bench} />
+            <InputRow label="DEADLIFT" value={deadlift} onChange={setDeadlift} kbd="decimal-pad" color={COLORS.deadlift} />
+            <Text style={styles.fieldLabel}>TARGET MODE</Text>
+            <View style={styles.pillRow}>
+              <TouchableOpacity onPress={() => setUseStretch(false)} style={[styles.pill, !useStretch && styles.pillActive]}><Text style={[styles.pillText, !useStretch && styles.pillTextActive]}>REALISTIC</Text></TouchableOpacity>
+              <TouchableOpacity onPress={() => setUseStretch(true)} style={[styles.pill, useStretch && styles.pillActive]}><Text style={[styles.pillText, useStretch && styles.pillTextActive]}>STRETCH</Text></TouchableOpacity>
             </View>
-
-            <TouchableOpacity style={styles.primaryBtn} onPress={handleNext}>
-              <Text style={styles.primaryBtnText}>NEXT</Text>
-            </TouchableOpacity>
+            <TouchableOpacity style={styles.btn} onPress={next}><Text style={styles.btnText}>NEXT</Text></TouchableOpacity>
           </View>
         )}
 
         {step === 3 && (
           <View>
-            <Text style={styles.stepLabel}>STEP 3 / 3</Text>
-            <Text style={styles.stepTitle}>STARTING LIFTS</Text>
-            <Text style={styles.stepDescription}>
-              Current 1-rep max for each lift (kg).
-            </Text>
-
-            <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: COLORS.squat }]}>SQUAT 1RM</Text>
-              <TextInput
-                style={[styles.textInput, { borderColor: COLORS.squat }]}
-                value={startSquat}
-                onChangeText={setStartSquat}
-                keyboardType="decimal-pad"
-                placeholder="150"
-                placeholderTextColor={COLORS.textMuted}
-              />
+            <Text style={styles.stepLabel}>3 / 4 — ACTIVITY</Text>
+            <Text style={styles.stepTitle}>DAILY E-BIKE?</Text>
+            <View style={styles.pillRow}>
+              <TouchableOpacity onPress={() => setEbikeEnabled(true)} style={[styles.pill, ebikeEnabled && styles.pillActive]}><Text style={[styles.pillText, ebikeEnabled && styles.pillTextActive]}>YES</Text></TouchableOpacity>
+              <TouchableOpacity onPress={() => setEbikeEnabled(false)} style={[styles.pill, !ebikeEnabled && styles.pillActive]}><Text style={[styles.pillText, !ebikeEnabled && styles.pillTextActive]}>NO</Text></TouchableOpacity>
             </View>
+            {ebikeEnabled && <InputRow label="DEFAULT MINUTES/DAY" value={ebikeDefault} onChange={setEbikeDefault} kbd="number-pad" />}
+            <TouchableOpacity style={styles.btn} onPress={next}><Text style={styles.btnText}>NEXT</Text></TouchableOpacity>
+          </View>
+        )}
 
-            <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: COLORS.bench }]}>BENCH 1RM</Text>
-              <TextInput
-                style={[styles.textInput, { borderColor: COLORS.bench }]}
-                value={startBench}
-                onChangeText={setStartBench}
-                keyboardType="decimal-pad"
-                placeholder="105"
-                placeholderTextColor={COLORS.textMuted}
-              />
+        {step === 4 && (
+          <View>
+            <Text style={styles.stepLabel}>4 / 4 — REMINDERS</Text>
+            <Text style={styles.stepTitle}>DAILY LOG REMINDER</Text>
+            <View style={styles.pillRow}>
+              <TouchableOpacity onPress={() => setReminderEnabled(true)} style={[styles.pill, reminderEnabled && styles.pillActive]}><Text style={[styles.pillText, reminderEnabled && styles.pillTextActive]}>ON</Text></TouchableOpacity>
+              <TouchableOpacity onPress={() => setReminderEnabled(false)} style={[styles.pill, !reminderEnabled && styles.pillActive]}><Text style={[styles.pillText, !reminderEnabled && styles.pillTextActive]}>OFF</Text></TouchableOpacity>
             </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: COLORS.deadlift }]}>DEADLIFT 1RM</Text>
-              <TextInput
-                style={[styles.textInput, { borderColor: COLORS.deadlift }]}
-                value={startDeadlift}
-                onChangeText={setStartDeadlift}
-                keyboardType="decimal-pad"
-                placeholder="210"
-                placeholderTextColor={COLORS.textMuted}
-              />
-            </View>
-
-            <TouchableOpacity style={styles.primaryBtn} onPress={handleFinish}>
-              <Text style={styles.primaryBtnText}>START THE GRIND</Text>
-            </TouchableOpacity>
+            {reminderEnabled && <InputRow label="TIME (HH:MM)" value={reminderTime} onChange={setReminderTime} />}
+            <TouchableOpacity style={styles.btn} onPress={finish}><Text style={styles.btnText}>START FORGING</Text></TouchableOpacity>
           </View>
         )}
       </ScrollView>
@@ -193,116 +129,35 @@ export default function OnboardingScreen() {
   );
 }
 
+function InputRow({ label, value, onChange, kbd, color }: { label: string; value: string; onChange: (v: string) => void; kbd?: any; color?: string }) {
+  return (
+    <View style={styles.inputGroup}>
+      <Text style={[styles.fieldLabel, color ? { color } : undefined]}>{label}</Text>
+      <TextInput style={[styles.input, color ? { borderColor: color } : undefined]} value={value} onChangeText={onChange} keyboardType={kbd || 'default'} placeholderTextColor={COLORS.textMuted} />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  scroll: {
-    flex: 1,
-  },
-  content: {
-    padding: 24,
-    flexGrow: 1,
-  },
-  centered: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 40,
-  },
-  huge: {
-    fontSize: 36,
-    fontWeight: '900',
-    color: COLORS.textPrimary,
-    fontFamily: mono,
-    letterSpacing: 4,
-  },
-  divider: {
-    width: 60,
-    height: 3,
-    backgroundColor: COLORS.primary,
-    marginTop: 16,
-    marginBottom: 16,
-  },
-  tagline: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: COLORS.primary,
-    fontFamily: mono,
-    letterSpacing: 3,
-  },
-  subtagline: {
-    fontSize: 11,
-    color: COLORS.textMuted,
-    fontFamily: mono,
-    letterSpacing: 2,
-    marginTop: 6,
-  },
-  description: {
-    fontSize: 13,
-    color: COLORS.textSecondary,
-    fontFamily: mono,
-    lineHeight: 22,
-    textAlign: 'center',
-    paddingHorizontal: 10,
-  },
-  stepLabel: {
-    fontSize: 10,
-    color: COLORS.primary,
-    fontFamily: mono,
-    letterSpacing: 2,
-    fontWeight: '700',
-    marginBottom: 8,
-  },
-  stepTitle: {
-    fontSize: 22,
-    fontWeight: '900',
-    color: COLORS.textPrimary,
-    fontFamily: mono,
-    letterSpacing: 2,
-    marginBottom: 8,
-  },
-  stepDescription: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-    fontFamily: mono,
-    marginBottom: 32,
-    lineHeight: 18,
-  },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  inputLabel: {
-    fontSize: 10,
-    color: COLORS.label,
-    fontFamily: mono,
-    letterSpacing: 1.5,
-    fontWeight: '700',
-    marginBottom: 8,
-  },
-  textInput: {
-    backgroundColor: COLORS.card,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 8,
-    padding: 14,
-    fontSize: 18,
-    color: COLORS.textPrimary,
-    fontFamily: mono,
-  },
-  primaryBtn: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 8,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  primaryBtnText: {
-    fontSize: 14,
-    fontWeight: '900',
-    color: '#fff',
-    fontFamily: mono,
-    letterSpacing: 2,
-  },
+  screen: { flex: 1, backgroundColor: COLORS.background },
+  scroll: { flex: 1 },
+  content: { padding: 24, flexGrow: 1 },
+  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 40 },
+  huge: { fontSize: 36, fontWeight: '900', color: COLORS.textPrimary, fontFamily: mono, letterSpacing: 4 },
+  divider: { width: 60, height: 3, backgroundColor: COLORS.primary, marginVertical: 16 },
+  tagline: { fontSize: 14, fontWeight: '700', color: COLORS.primary, fontFamily: mono, letterSpacing: 3 },
+  sub: { fontSize: 11, color: COLORS.textMuted, fontFamily: mono, letterSpacing: 2, marginTop: 6 },
+  desc: { fontSize: 13, color: COLORS.textSecondary, fontFamily: mono, lineHeight: 22, textAlign: 'center', paddingHorizontal: 10 },
+  stepLabel: { fontSize: 10, color: COLORS.primary, fontFamily: mono, letterSpacing: 2, fontWeight: '700', marginBottom: 8 },
+  stepTitle: { fontSize: 22, fontWeight: '900', color: COLORS.textPrimary, fontFamily: mono, letterSpacing: 2, marginBottom: 24 },
+  inputGroup: { marginBottom: 20 },
+  fieldLabel: { fontSize: 10, color: COLORS.label, fontFamily: mono, letterSpacing: 1.5, fontWeight: '700', marginBottom: 8 },
+  input: { backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.border, borderRadius: 8, padding: 14, fontSize: 18, color: COLORS.textPrimary, fontFamily: mono },
+  pillRow: { flexDirection: 'row', gap: 10, marginBottom: 20 },
+  pill: { flex: 1, borderWidth: 1, borderColor: COLORS.ghostBorder, borderRadius: 8, paddingVertical: 12, alignItems: 'center' },
+  pillActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  pillText: { fontSize: 12, fontWeight: '700', color: COLORS.textSecondary, fontFamily: mono, letterSpacing: 1 },
+  pillTextActive: { color: '#fff' },
+  btn: { backgroundColor: COLORS.primary, borderRadius: 8, paddingVertical: 16, alignItems: 'center', marginTop: 20 },
+  btnText: { fontSize: 14, fontWeight: '900', color: '#fff', fontFamily: mono, letterSpacing: 2 },
 });

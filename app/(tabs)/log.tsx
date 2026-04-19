@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,328 +7,454 @@ import {
   TextInput,
   TouchableOpacity,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
-import { COLORS } from '@/lib/constants';
 import { useAppData } from '@/hooks/useAppData';
 import { useCurrentProgram } from '@/hooks/useCurrentProgram';
+import { useCalorieBalance } from '@/hooks/useCalorieBalance';
 import { getDateString, addDays, formatDate, clamp } from '@/lib/helpers';
+import { COLORS } from '@/lib/constants';
+import { getTodaySteps } from '@/lib/pedometer';
 import { Card, SectionLabel } from '@/components/Card';
 import { SliderInput } from '@/components/SliderInput';
+import { CalorieBalanceCard } from '@/components/CalorieBalanceCard';
+import { ActivityInputCard } from '@/components/ActivityInputCard';
+import { TDEEBreakdownView } from '@/components/TDEEBreakdown';
 
 const mono = Platform.select({ ios: 'Menlo', default: 'monospace' });
-
-function NumberInput({
-  label,
-  value,
-  onChange,
-  step = 1,
-  unit,
-  min,
-  max,
-  hint,
-  borderColor,
-}: {
-  label: string;
-  value: number | undefined;
-  onChange: (v: number | undefined) => void;
-  step?: number;
-  unit?: string;
-  min?: number;
-  max?: number;
-  hint?: string;
-  borderColor?: string;
-}) {
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-
-  const handleChange = (text: string) => {
-    if (text === '') {
-      onChange(undefined);
-      return;
-    }
-    let num = parseFloat(text);
-    if (isNaN(num)) return;
-    if (min !== undefined && max !== undefined) {
-      num = clamp(num, min, max);
-    }
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }, 100);
-    onChange(num);
-  };
-
-  return (
-    <View style={styles.inputGroup}>
-      <Text style={styles.inputLabel}>{label}{unit ? ` (${unit})` : ''}</Text>
-      <TextInput
-        style={[
-          styles.textInput,
-          borderColor ? { borderColor } : undefined,
-        ]}
-        value={value !== undefined ? String(value) : ''}
-        onChangeText={handleChange}
-        keyboardType="decimal-pad"
-        placeholderTextColor={COLORS.textMuted}
-        placeholder="--"
-      />
-      {hint && <Text style={styles.hint}>{hint}</Text>}
-    </View>
-  );
-}
+const TODAY = getDateString(new Date());
 
 export default function LogScreen() {
-  const { data, loading, updateEntry } = useAppData();
   const insets = useSafeAreaInsets();
-  const [selectedDate, setSelectedDate] = useState(getDateString(new Date()));
+  const { data, loading, updateEntry } = useAppData();
+  const [selectedDate, setSelectedDate] = useState(TODAY);
+  const [tdeeExpanded, setTdeeExpanded] = useState(false);
+  const debounceTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   const programStart = data?.settings?.programStart || '2026-04-14';
-  const program = useCurrentProgram(programStart);
+  const { week, nutritionPhase } = useCurrentProgram(programStart);
+  const { tdee, caloriesIn, netBalance, target, status, currentWeight } =
+    useCalorieBalance(data, selectedDate);
+
+  const entry = data?.entries[selectedDate] || { date: selectedDate };
+
+  // Auto-sync steps on mount if setting enabled and date is today
+  useEffect(() => {
+    if (!data || selectedDate !== TODAY) return;
+    if (!data.settings.autoSyncSteps) return;
+
+    (async () => {
+      const steps = await getTodaySteps();
+      if (steps != null) {
+        updateEntry(selectedDate, { steps, stepsAutoSynced: true });
+      }
+    })();
+  }, [data?.settings?.autoSyncSteps, selectedDate]);
+
+  // Debounced update
+  const debouncedUpdate = useCallback(
+    (field: string, value: any) => {
+      if (debounceTimers.current[field]) {
+        clearTimeout(debounceTimers.current[field]);
+      }
+      debounceTimers.current[field] = setTimeout(() => {
+        updateEntry(selectedDate, { [field]: value });
+      }, 400);
+    },
+    [selectedDate, updateEntry],
+  );
+
+  // Immediate update (for sliders / taps)
+  const immediateUpdate = useCallback(
+    (field: string, value: any) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      updateEntry(selectedDate, { [field]: value });
+    },
+    [selectedDate, updateEntry],
+  );
+
+  // Activity card handler
+  const handleActivityUpdate = useCallback(
+    (field: string, value: any) => {
+      if (field === 'ebikeMinutes') {
+        immediateUpdate(field, value);
+      } else {
+        debouncedUpdate(field, value);
+      }
+    },
+    [debouncedUpdate, immediateUpdate],
+  );
+
+  // Date navigation
+  const goBack = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSelectedDate(prev => addDays(prev, -1));
+  };
+  const goForward = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSelectedDate(prev => addDays(prev, 1));
+  };
+  const goToday = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setSelectedDate(TODAY);
+  };
+
+  // Find session for selected date
+  const session = data?.sessions.find(s => s.date === selectedDate) || null;
+  const trainingBurn = tdee.training;
+  const trainingDuration = session?.startTime && session?.endTime
+    ? Math.round(
+        (new Date(session.endTime).getTime() - new Date(session.startTime).getTime()) / 60000,
+      )
+    : null;
+
+  // Nutrition target border colors
+  const calInRange =
+    (entry.calories || 0) === 0 ||
+    ((entry.calories || 0) >= target.min && (entry.calories || 0) <= target.max);
+  const proteinInRange =
+    (entry.protein || 0) === 0 ||
+    ((entry.protein || 0) >= nutritionPhase.protein[0] &&
+      (entry.protein || 0) <= nutritionPhase.protein[1]);
+  const carbsInRange =
+    (entry.carbs || 0) === 0 ||
+    ((entry.carbs || 0) >= nutritionPhase.carbs[0] &&
+      (entry.carbs || 0) <= nutritionPhase.carbs[1]);
+  const fatInRange =
+    (entry.fat || 0) === 0 ||
+    ((entry.fat || 0) >= nutritionPhase.fat[0] && (entry.fat || 0) <= nutritionPhase.fat[1]);
 
   if (loading || !data) {
     return (
-      <View style={[styles.screen, { paddingTop: insets.top }]}>
-        <Text style={styles.loadingText}>Loading...</Text>
+      <View style={[styles.center, { backgroundColor: COLORS.background }]}>
+        <ActivityIndicator color={COLORS.primary} size="large" />
       </View>
     );
   }
 
-  const entry = data.entries[selectedDate] || {};
-  const { nutritionPhase } = program;
-
-  const isToday = selectedDate === getDateString(new Date());
-
-  const update = (field: string, value: any) => {
-    updateEntry(selectedDate, { [field]: value });
-  };
-
-  const calInRange =
-    entry.calories !== undefined &&
-    entry.calories >= nutritionPhase.calories[0] &&
-    entry.calories <= nutritionPhase.calories[1];
-
   return (
-    <View style={[styles.screen, { paddingTop: insets.top }]}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      {/* ── DATE PICKER ── */}
+      <View style={styles.datePicker}>
+        <TouchableOpacity onPress={goBack} style={styles.arrow} activeOpacity={0.6}>
+          <Text style={styles.arrowText}>{'◀'}</Text>
+        </TouchableOpacity>
+        <View style={styles.dateCenter}>
+          <Text style={styles.dateText}>{formatDate(selectedDate)}</Text>
+          <Text style={styles.dateSub}>{selectedDate}</Text>
+        </View>
+        <TouchableOpacity onPress={goForward} style={styles.arrow} activeOpacity={0.6}>
+          <Text style={styles.arrowText}>{'▶'}</Text>
+        </TouchableOpacity>
+        {selectedDate !== TODAY && (
+          <TouchableOpacity onPress={goToday} style={styles.todayBtn} activeOpacity={0.7}>
+            <Text style={styles.todayText}>TODAY</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 80 }]}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        {/* Date Picker */}
-        <View style={styles.datePicker}>
-          <TouchableOpacity
-            onPress={() => setSelectedDate(addDays(selectedDate, -1))}
-            style={styles.dateArrow}
-          >
-            <Text style={styles.dateArrowText}>{'<'}</Text>
-          </TouchableOpacity>
-          <View style={styles.dateCenter}>
-            <Text style={styles.dateText}>{formatDate(selectedDate)}</Text>
-            <Text style={styles.dateSubtext}>{selectedDate}</Text>
-          </View>
-          <TouchableOpacity
-            onPress={() => setSelectedDate(addDays(selectedDate, 1))}
-            style={styles.dateArrow}
-          >
-            <Text style={styles.dateArrowText}>{'>'}</Text>
-          </TouchableOpacity>
-          {!isToday && (
-            <TouchableOpacity
-              onPress={() => setSelectedDate(getDateString(new Date()))}
-              style={styles.todayBtn}
-            >
-              <Text style={styles.todayBtnText}>TODAY</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+        {/* ── DAILY BALANCE SUMMARY ── */}
+        <CalorieBalanceCard
+          caloriesIn={caloriesIn}
+          tdee={tdee}
+          target={target}
+          status={status}
+          compact
+        />
 
-        {/* Body Section */}
+        {/* ── BODY ── */}
         <SectionLabel>BODY</SectionLabel>
-        <Card delay={0}>
-          <NumberInput
-            label="Weight"
-            value={entry.weight}
-            onChange={v => update('weight', v)}
-            step={0.1}
-            unit="kg"
-            min={50}
-            max={250}
-          />
-          <NumberInput
-            label="Waist"
-            value={entry.waist}
-            onChange={v => update('waist', v)}
-            step={0.5}
-            unit="cm"
-          />
-        </Card>
-
-        {/* Nutrition Section */}
-        <SectionLabel>NUTRITION</SectionLabel>
         <Card delay={50}>
-          <NumberInput
-            label="Calories"
-            value={entry.calories}
-            onChange={v => update('calories', v)}
-            unit="kcal"
-            borderColor={
-              entry.calories !== undefined
-                ? calInRange
-                  ? COLORS.success
-                  : COLORS.warning
-                : undefined
-            }
-          />
-          <NumberInput
-            label="Protein"
-            value={entry.protein}
-            onChange={v => update('protein', v)}
-            unit="g"
-          />
-          <NumberInput
-            label="Carbs"
-            value={entry.carbs}
-            onChange={v => update('carbs', v)}
-            unit="g"
-          />
-          <NumberInput
-            label="Fat"
-            value={entry.fat}
-            onChange={v => update('fat', v)}
-            unit="g"
-          />
-          <Text style={styles.phaseTarget}>
-            {nutritionPhase.name}: {nutritionPhase.calories[0]}–{nutritionPhase.calories[1]} kcal | {nutritionPhase.protein[0]}–{nutritionPhase.protein[1]}g protein
+          <View style={styles.row}>
+            <View style={styles.halfInput}>
+              <Text style={styles.inputLabel}>Weight (kg)</Text>
+              <TextInput
+                style={styles.input}
+                value={entry.weight != null ? String(entry.weight) : ''}
+                onChangeText={t => debouncedUpdate('weight', t ? parseFloat(t) || undefined : undefined)}
+                keyboardType="decimal-pad"
+                placeholder="—"
+                placeholderTextColor={COLORS.textMuted}
+              />
+            </View>
+            <View style={styles.halfInput}>
+              <Text style={styles.inputLabel}>Waist (cm)</Text>
+              <TextInput
+                style={styles.input}
+                value={entry.waist != null ? String(entry.waist) : ''}
+                onChangeText={t => debouncedUpdate('waist', t ? parseFloat(t) || undefined : undefined)}
+                keyboardType="decimal-pad"
+                placeholder="—"
+                placeholderTextColor={COLORS.textMuted}
+              />
+            </View>
+          </View>
+        </Card>
+
+        {/* ── NUTRITION IN ── */}
+        <SectionLabel>NUTRITION IN</SectionLabel>
+        <Card
+          delay={100}
+          borderColor={
+            (entry.calories || 0) > 0
+              ? calInRange ? COLORS.success : COLORS.primary
+              : undefined
+          }
+        >
+          <Text style={styles.phaseTag}>
+            {nutritionPhase.name} — Week {week}
           </Text>
+          <View style={styles.row}>
+            <View style={styles.halfInput}>
+              <Text style={styles.inputLabel}>
+                Calories ({target.min}–{target.max})
+              </Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  (entry.calories || 0) > 0 && {
+                    borderColor: calInRange ? COLORS.success : COLORS.primary,
+                  },
+                ]}
+                value={entry.calories != null ? String(entry.calories) : ''}
+                onChangeText={t =>
+                  debouncedUpdate('calories', t ? parseInt(t) || undefined : undefined)
+                }
+                keyboardType="number-pad"
+                placeholder="kcal"
+                placeholderTextColor={COLORS.textMuted}
+              />
+            </View>
+            <View style={styles.halfInput}>
+              <Text style={styles.inputLabel}>
+                Protein ({nutritionPhase.protein[0]}–{nutritionPhase.protein[1]}g)
+              </Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  (entry.protein || 0) > 0 && {
+                    borderColor: proteinInRange ? COLORS.success : COLORS.primary,
+                  },
+                ]}
+                value={entry.protein != null ? String(entry.protein) : ''}
+                onChangeText={t =>
+                  debouncedUpdate('protein', t ? parseInt(t) || undefined : undefined)
+                }
+                keyboardType="number-pad"
+                placeholder="g"
+                placeholderTextColor={COLORS.textMuted}
+              />
+            </View>
+          </View>
+          <View style={styles.row}>
+            <View style={styles.halfInput}>
+              <Text style={styles.inputLabel}>
+                Carbs ({nutritionPhase.carbs[0]}–{nutritionPhase.carbs[1]}g)
+              </Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  (entry.carbs || 0) > 0 && {
+                    borderColor: carbsInRange ? COLORS.success : COLORS.primary,
+                  },
+                ]}
+                value={entry.carbs != null ? String(entry.carbs) : ''}
+                onChangeText={t =>
+                  debouncedUpdate('carbs', t ? parseInt(t) || undefined : undefined)
+                }
+                keyboardType="number-pad"
+                placeholder="g"
+                placeholderTextColor={COLORS.textMuted}
+              />
+            </View>
+            <View style={styles.halfInput}>
+              <Text style={styles.inputLabel}>
+                Fat ({nutritionPhase.fat[0]}–{nutritionPhase.fat[1]}g)
+              </Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  (entry.fat || 0) > 0 && {
+                    borderColor: fatInRange ? COLORS.success : COLORS.primary,
+                  },
+                ]}
+                value={entry.fat != null ? String(entry.fat) : ''}
+                onChangeText={t =>
+                  debouncedUpdate('fat', t ? parseInt(t) || undefined : undefined)
+                }
+                keyboardType="number-pad"
+                placeholder="g"
+                placeholderTextColor={COLORS.textMuted}
+              />
+            </View>
+          </View>
         </Card>
 
-        {/* Activity Section */}
-        <SectionLabel>ACTIVITY</SectionLabel>
-        <Card delay={100}>
-          <NumberInput
-            label="Steps"
-            value={entry.steps}
-            onChange={v => update('steps', v)}
-            min={0}
-            max={50000}
-            hint="Target: 8,000–10,000 steps"
-          />
-          <NumberInput
-            label="Cycling"
-            value={entry.cycling}
-            onChange={v => update('cycling', v)}
-            unit="min"
-          />
-        </Card>
-
-        {/* Recovery Section */}
-        <SectionLabel>RECOVERY</SectionLabel>
+        {/* ── ACTIVITY OUT ── */}
+        <SectionLabel>ACTIVITY OUT</SectionLabel>
         <Card delay={150}>
-          <NumberInput
-            label="Sleep"
-            value={entry.sleep}
-            onChange={v => update('sleep', v)}
-            step={0.5}
-            unit="hours"
-            min={0}
-            max={14}
+          <ActivityInputCard
+            steps={entry.steps}
+            stepsAutoSynced={entry.stepsAutoSynced || false}
+            ebikeMinutes={entry.ebikeMinutes}
+            otherCardioKcal={entry.otherCardioKcal}
+            otherCardioNotes={entry.otherCardioNotes}
+            trainingBurn={trainingBurn}
+            trainingDuration={trainingDuration}
+            currentWeight={currentWeight}
+            onUpdate={handleActivityUpdate}
           />
-          <NumberInput
-            label="Resting HR"
-            value={entry.restingHR}
-            onChange={v => update('restingHR', v)}
-            unit="bpm"
-          />
-          <View style={{ marginTop: 8 }}>
+        </Card>
+
+        {/* ── TDEE BREAKDOWN (expandable) ── */}
+        <TouchableOpacity
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            setTdeeExpanded(prev => !prev);
+          }}
+          activeOpacity={0.7}
+        >
+          <SectionLabel>{tdeeExpanded ? 'TDEE BREAKDOWN ▾' : 'TDEE BREAKDOWN ▸'}</SectionLabel>
+        </TouchableOpacity>
+        {tdeeExpanded && (
+          <Card delay={0}>
+            <TDEEBreakdownView tdee={tdee} currentWeight={currentWeight} />
+          </Card>
+        )}
+
+        {/* ── RECOVERY ── */}
+        <SectionLabel>RECOVERY</SectionLabel>
+        <Card delay={200}>
+          <View style={styles.row}>
+            <View style={styles.halfInput}>
+              <Text style={styles.inputLabel}>Sleep (hrs)</Text>
+              <TextInput
+                style={styles.input}
+                value={entry.sleep != null ? String(entry.sleep) : ''}
+                onChangeText={t =>
+                  debouncedUpdate('sleep', t ? parseFloat(t) || undefined : undefined)
+                }
+                keyboardType="decimal-pad"
+                placeholder="—"
+                placeholderTextColor={COLORS.textMuted}
+              />
+            </View>
+            <View style={styles.halfInput}>
+              <Text style={styles.inputLabel}>Resting HR</Text>
+              <TextInput
+                style={styles.input}
+                value={entry.restingHR != null ? String(entry.restingHR) : ''}
+                onChangeText={t =>
+                  debouncedUpdate('restingHR', t ? parseInt(t) || undefined : undefined)
+                }
+                keyboardType="number-pad"
+                placeholder="bpm"
+                placeholderTextColor={COLORS.textMuted}
+              />
+            </View>
+          </View>
+          <View style={[styles.row, { marginBottom: 0 }]}>
+            <View style={styles.halfInput}>
+              <Text style={styles.inputLabel}>HRV</Text>
+              <TextInput
+                style={styles.input}
+                value={entry.hrv != null ? String(entry.hrv) : ''}
+                onChangeText={t =>
+                  debouncedUpdate('hrv', t ? parseInt(t) || undefined : undefined)
+                }
+                keyboardType="number-pad"
+                placeholder="ms"
+                placeholderTextColor={COLORS.textMuted}
+              />
+            </View>
+            <View style={styles.halfInput} />
+          </View>
+
+          <View style={styles.sliderGroup}>
             <SliderInput
               label="Recovery"
               value={entry.recovery || 5}
-              min={1}
-              max={10}
-              onChange={v => update('recovery', v)}
+              onChange={v => immediateUpdate('recovery', v)}
             />
             <SliderInput
               label="Energy"
               value={entry.energy || 5}
-              min={1}
-              max={10}
-              onChange={v => update('energy', v)}
+              onChange={v => immediateUpdate('energy', v)}
             />
             <SliderInput
-              label="Mood / Motivation"
+              label="Mood"
               value={entry.mood || 5}
-              min={1}
-              max={10}
-              onChange={v => update('mood', v)}
+              onChange={v => immediateUpdate('mood', v)}
             />
           </View>
         </Card>
 
-        {/* Notes Section */}
+        {/* ── NOTES ── */}
         <SectionLabel>NOTES</SectionLabel>
-        <Card delay={200}>
+        <Card delay={250}>
           <TextInput
             style={styles.notesInput}
             value={entry.notes || ''}
-            onChangeText={text => update('notes', text)}
-            placeholder="Joint pain, how training felt, anything noteworthy..."
+            onChangeText={t => debouncedUpdate('notes', t)}
+            placeholder="How did today go? Anything to note..."
             placeholderTextColor={COLORS.textMuted}
             multiline
             numberOfLines={4}
             textAlignVertical="top"
           />
         </Card>
-
-        <View style={{ height: 40 }} />
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
+  container: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   scroll: {
     flex: 1,
   },
-  content: {
-    padding: 16,
+  scrollContent: {
+    paddingHorizontal: 16,
   },
-  loadingText: {
-    color: COLORS.textMuted,
-    fontFamily: mono,
-    fontSize: 14,
-    textAlign: 'center',
-    marginTop: 100,
-  },
+
+  /* ── Date picker ── */
   datePicker: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
-    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
   },
-  dateArrow: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.ghostBorder,
-    borderRadius: 8,
+  arrow: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
   },
-  dateArrowText: {
-    fontSize: 18,
-    color: COLORS.textSecondary,
+  arrowText: {
+    fontSize: 16,
+    color: COLORS.textPrimary,
     fontFamily: mono,
-    fontWeight: '700',
   },
   dateCenter: {
     alignItems: 'center',
+    minWidth: 120,
   },
   dateText: {
     fontSize: 18,
@@ -336,37 +462,45 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary,
     fontFamily: mono,
   },
-  dateSubtext: {
+  dateSub: {
     fontSize: 10,
     color: COLORS.textMuted,
     fontFamily: mono,
     marginTop: 2,
   },
   todayBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    position: 'absolute',
+    right: 16,
     backgroundColor: COLORS.primary,
-    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 4,
   },
-  todayBtnText: {
+  todayText: {
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#fff',
     fontFamily: mono,
     letterSpacing: 1,
   },
-  inputGroup: {
-    marginBottom: 14,
+
+  /* ── Inputs ── */
+  row: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
+  },
+  halfInput: {
+    flex: 1,
   },
   inputLabel: {
-    fontSize: 11,
+    fontSize: 10,
     color: COLORS.textSecondary,
     fontFamily: mono,
     marginBottom: 6,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 0.5,
   },
-  textInput: {
+  input: {
     backgroundColor: COLORS.background,
     borderWidth: 1,
     borderColor: COLORS.border,
@@ -376,26 +510,28 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary,
     fontFamily: mono,
   },
-  hint: {
+  phaseTag: {
     fontSize: 10,
-    color: COLORS.textMuted,
+    color: COLORS.primary,
     fontFamily: mono,
-    marginTop: 4,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+    marginBottom: 12,
   },
-  phaseTarget: {
-    fontSize: 10,
-    color: COLORS.textSecondary,
-    fontFamily: mono,
-    marginTop: 4,
-    lineHeight: 16,
+
+  /* ── Recovery ── */
+  sliderGroup: {
+    marginTop: 16,
   },
+
+  /* ── Notes ── */
   notesInput: {
     backgroundColor: COLORS.background,
     borderWidth: 1,
     borderColor: COLORS.border,
     borderRadius: 8,
     padding: 12,
-    fontSize: 13,
+    fontSize: 14,
     color: COLORS.textPrimary,
     fontFamily: mono,
     minHeight: 100,

@@ -1,5 +1,5 @@
-import { BLOCKS, BENCHMARKS, NUTRITION_PHASES } from './constants';
-import type { Block, Benchmark, NutritionPhase, LiftEntry, LiftType } from '@/types';
+import { BLOCKS, BENCHMARKS_REALISTIC, BENCHMARKS_STRETCH, NUTRITION_PHASES } from './constants';
+import type { Block, Benchmark, NutritionPhase, SetLog, LiftType } from '@/types';
 
 export function getWeekNumber(date: Date, programStart: string): number {
   const start = new Date(programStart + 'T00:00:00');
@@ -12,6 +12,7 @@ export function getCurrentBlock(week: number): Block {
 }
 
 export function getEstimated1RM(weight: number, reps: number): number {
+  if (reps <= 0 || weight <= 0) return 0;
   if (reps === 1) return weight;
   return Math.round(weight * (1 + reps / 30));
 }
@@ -20,9 +21,10 @@ export function getNutritionPhase(week: number): NutritionPhase {
   return NUTRITION_PHASES.find(p => week >= p.weeks[0] && week <= p.weeks[1]) || NUTRITION_PHASES[0];
 }
 
-export function getCurrentBenchmark(week: number): Benchmark {
+export function getCurrentBenchmark(week: number, stretch: boolean = false): Benchmark {
+  const benchmarks = stretch ? BENCHMARKS_STRETCH : BENCHMARKS_REALISTIC;
   const month = Math.min(8, Math.floor((week - 1) / 4));
-  return BENCHMARKS[month];
+  return benchmarks[month];
 }
 
 export function getDateString(date: Date): string {
@@ -44,28 +46,31 @@ export function formatDate(dateStr: string): string {
   return `${months[d.getMonth()]} ${d.getDate()}`;
 }
 
-export function getBestLift(lifts: LiftEntry[], type: LiftType): LiftEntry | null {
-  const filtered = lifts.filter(l => l.type === type);
+export function getBestE1RM(sets: SetLog[], type: LiftType): number {
+  const filtered = sets.filter(s => s.liftType === type && s.isMain);
+  if (filtered.length === 0) return 0;
+  return Math.max(...filtered.map(s => s.e1rm || getEstimated1RM(s.weight, s.reps)));
+}
+
+export function getHeaviestSet(sets: SetLog[], type: LiftType): SetLog | null {
+  const filtered = sets.filter(s => s.liftType === type);
   if (filtered.length === 0) return null;
-  return filtered.reduce((best, l) => {
-    const bestE1rm = best.e1rm || getEstimated1RM(best.weight, best.reps);
-    const lE1rm = l.e1rm || getEstimated1RM(l.weight, l.reps);
-    return lE1rm > bestE1rm ? l : best;
+  return filtered.reduce((best, s) => {
+    const bestE = best.e1rm || getEstimated1RM(best.weight, best.reps);
+    const sE = s.e1rm || getEstimated1RM(s.weight, s.reps);
+    return sE > bestE ? s : best;
   });
-}
-
-export function getBestE1RM(lifts: LiftEntry[], type: LiftType): number {
-  const best = getBestLift(lifts, type);
-  if (!best) return 0;
-  return best.e1rm || getEstimated1RM(best.weight, best.reps);
-}
-
-export function getHeaviestLift(lifts: LiftEntry[], type: LiftType): LiftEntry | null {
-  const filtered = lifts.filter(l => l.type === type);
-  if (filtered.length === 0) return null;
-  return filtered.reduce((best, l) => (l.weight > best.weight ? l : best));
 }
 
 export function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
+}
+
+export function formatNumber(n: number): string {
+  return n.toLocaleString('en-US');
+}
+
+export function getDayOfWeek(dateStr: string): number {
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.getDay();
 }

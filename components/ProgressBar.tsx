@@ -3,29 +3,19 @@ import { View, StyleSheet, Animated, Text } from 'react-native';
 import { COLORS } from '@/lib/constants';
 
 interface ProgressBarProps {
-  progress: number; // 0-1
+  progress: number;
   color?: string;
   height?: number;
   showLabel?: boolean;
   label?: string;
 }
 
-export function ProgressBar({
-  progress,
-  color = COLORS.primary,
-  height = 6,
-  showLabel = false,
-  label,
-}: ProgressBarProps) {
+export function ProgressBar({ progress, color = COLORS.primary, height = 6, showLabel, label }: ProgressBarProps) {
   const animWidth = useRef(new Animated.Value(0)).current;
   const clamped = Math.max(0, Math.min(1, progress));
 
   useEffect(() => {
-    Animated.timing(animWidth, {
-      toValue: clamped,
-      duration: 600,
-      useNativeDriver: false,
-    }).start();
+    Animated.timing(animWidth, { toValue: clamped, duration: 600, useNativeDriver: false }).start();
   }, [clamped]);
 
   return (
@@ -38,17 +28,7 @@ export function ProgressBar({
       )}
       <View style={[styles.track, { height }]}>
         <Animated.View
-          style={[
-            styles.fill,
-            {
-              height,
-              backgroundColor: color,
-              width: animWidth.interpolate({
-                inputRange: [0, 1],
-                outputRange: ['0%', '100%'],
-              }),
-            },
-          ]}
+          style={[styles.fill, { height, backgroundColor: color, width: animWidth.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) }]}
         />
       </View>
     </View>
@@ -56,25 +36,8 @@ export function ProgressBar({
 }
 
 const styles = StyleSheet.create({
-  track: {
-    backgroundColor: COLORS.border,
-    borderRadius: 3,
-    overflow: 'hidden',
-    width: '100%',
-  },
-  fill: {
-    borderRadius: 3,
-  },
-  labelRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  labelText: {
-    fontSize: 10,
-    color: COLORS.textMuted,
-    fontFamily: 'monospace',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
+  track: { backgroundColor: COLORS.border, borderRadius: 3, overflow: 'hidden', width: '100%' },
+  fill: { borderRadius: 3 },
+  labelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
+  labelText: { fontSize: 10, color: COLORS.textMuted, fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: 1 },
 });
