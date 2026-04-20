@@ -18,5 +18,10 @@
       "autoIncrement": true,
       "ios": {}
     }
+  },
+  "submit": {
+    "production": {
+      "ios": {}
+    }
   }
 }
