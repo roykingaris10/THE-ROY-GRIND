@@ -1,0 +1,41 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#12101E"/>
+      <stop offset="100%" stop-color="#08060C"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#D4AF6A"/>
+      <stop offset="50%" stop-color="#C9A961"/>
+      <stop offset="100%" stop-color="#8B7335"/>
+    </linearGradient>
+    <linearGradient id="halo" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#C9A961" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#C9A961" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1024" height="1024" fill="url(#bg)" rx="224"/>
+
+  <!-- Subtle radial glow -->
+  <circle cx="512" cy="420" r="300" fill="url(#halo)" opacity="0.15"/>
+
+  <!-- Orthodox Cross -->
+  <!-- Vertical beam -->
+  <rect x="494" y="200" width="36" height="440" rx="4" fill="url(#gold)"/>
+  <!-- Top horizontal bar -->
+  <rect x="434" y="280" width="156" height="24" rx="4" fill="url(#gold)"/>
+  <!-- Middle horizontal bar (main) -->
+  <rect x="404" y="370" width="216" height="28" rx="4" fill="url(#gold)"/>
+  <!-- Bottom slanted bar -->
+  <line x1="430" y1="520" x2="594" y2="480" stroke="url(#gold)" stroke-width="22" stroke-linecap="round"/>
+
+  <!-- INVICTVS text -->
+  <text x="512" y="760" text-anchor="middle" font-family="serif" font-size="72" font-weight="600" letter-spacing="12" fill="#C9A961">INVICTVS</text>
+
+  <!-- Thin decorative lines -->
+  <line x1="280" y1="800" x2="460" y2="800" stroke="#C9A961" stroke-width="1" opacity="0.4"/>
+  <line x1="564" y1="800" x2="744" y2="800" stroke="#C9A961" stroke-width="1" opacity="0.4"/>
+  <circle cx="512" cy="800" r="3" fill="#C9A961" opacity="0.5"/>
+</svg>
