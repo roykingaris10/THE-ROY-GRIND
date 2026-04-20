@@ -43,7 +43,8 @@
           "icon": "./assets/images/icon.png"
         }
       ],
-      "expo-sensors"
+      "expo-sensors",
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true
