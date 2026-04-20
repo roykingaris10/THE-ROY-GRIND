@@ -18,12 +18,17 @@
       }
     },
     "production": {
+      "autoSubmit": true,
+      "submitProfile": "production",
       "ios": {}
     }
   },
   "submit": {
     "production": {
-      "ios": {}
+      "ios": {
+        "ascApiKeyId": "V7PTQ53B9Z",
+        "ascApiKeyIssuerId": "7c1dc6c3-21d6-4164-b3c8-6c8642824a33"
+      }
     }
   }
 }
