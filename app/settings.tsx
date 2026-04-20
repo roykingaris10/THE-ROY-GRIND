@@ -9,23 +9,22 @@ import {
   Alert,
   Platform,
   Keyboard,
+  Switch,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
 import { COLORS } from '@/lib/constants';
+import { FONTS } from '@/lib/typography';
 import { useAppData } from '@/hooks/useAppData';
-import { useGamification } from '@/hooks/useGamification';
 import { Card, SectionLabel } from '@/components/Card';
-import { XPBar } from '@/components/XPBar';
-
-const mono = Platform.select({ ios: 'Menlo', default: 'monospace' });
+import { GradientButton } from '@/components/GradientButton';
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { data, loading, updateSettings, updateProfile, resetAllData } = useAppData();
-  const gam = useGamification(data);
 
   const [age, setAge] = useState(String(data?.profile.age ?? 24));
   const [height, setHeight] = useState(String(data?.profile.heightCm ?? 180));
@@ -36,6 +35,7 @@ export default function SettingsScreen() {
   const [defaultEbike, setDefaultEbike] = useState(String(data?.settings.defaultEbikeMinutesPerDay ?? 20));
   const [reminderEnabled, setReminderEnabled] = useState(data?.settings.reminderEnabled ?? true);
   const [reminderTime, setReminderTime] = useState(data?.settings.reminderTime ?? '21:00');
+  const [expandPoem, setExpandPoem] = useState(false);
 
   const saveProfile = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -62,14 +62,7 @@ export default function SettingsScreen() {
       'This will erase everything and restart from onboarding. This cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Reset',
-          style: 'destructive',
-          onPress: async () => {
-            await resetAllData();
-            router.replace('/onboarding');
-          },
-        },
+        { text: 'Reset', style: 'destructive', onPress: async () => { await resetAllData(); router.replace('/onboarding'); } },
       ]
     );
   };
@@ -78,133 +71,213 @@ export default function SettingsScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
+      {/* Top bar */}
       <View style={styles.topBar}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn}>
-          <Text style={styles.closeText}>{'\u2715'}</Text>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <FontAwesome name="chevron-left" size={14} color={COLORS.silver} />
         </TouchableOpacity>
-        <Text style={styles.title}>{'\u2670'} SETTINGS</Text>
+        <Text style={styles.title}>Settings</Text>
         <View style={{ width: 36 }} />
       </View>
 
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 40 }]}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
       >
-        <Card>
-          <XPBar xp={gam.xp} level={gam.level} progress={gam.levelProgress} xpToNext={gam.xpToNext} />
+        {/* Profile section */}
+        <SectionLabel>PROFILE</SectionLabel>
+        <Card style={{ padding: 0 }}>
+          <SettingsRow label="Age" right={
+            <TextInput style={styles.rowInput} value={age} onChangeText={setAge}
+              keyboardType="number-pad" returnKeyType="done" onSubmitEditing={Keyboard.dismiss} />
+          } />
+          <SettingsRow label="Sex" right={
+            <Text style={styles.rowValue}>{sex === 'male' ? 'Male' : 'Female'}</Text>
+          } />
+          <SettingsRow label="Height" right={
+            <TextInput style={styles.rowInput} value={height} onChangeText={setHeight}
+              keyboardType="number-pad" returnKeyType="done" onSubmitEditing={Keyboard.dismiss} />
+          } last />
+        </Card>
+        <GradientButton label="SAVE PROFILE" onPress={saveProfile} style={{ marginBottom: 18 }} />
+
+        {/* Program section */}
+        <SectionLabel>PROGRAM</SectionLabel>
+        <Card style={{ padding: 0 }}>
+          <SettingsRow label="Start Date" right={
+            <TextInput style={styles.rowInput} value={programStart} onChangeText={setProgramStart}
+              returnKeyType="done" onSubmitEditing={Keyboard.dismiss} />
+          } />
+          <SettingsRow label="Target" right={
+            <View style={styles.miniToggle}>
+              <TouchableOpacity
+                onPress={() => setShowStretch(false)}
+                style={[styles.miniToggleBtn, !showStretch && styles.miniToggleBtnActive]}
+              >
+                <Text style={[styles.miniToggleText, !showStretch && { color: COLORS.silverBright }]}>REALISTIC</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setShowStretch(true)}
+                style={[styles.miniToggleBtn, showStretch && styles.miniToggleBtnActive]}
+              >
+                <Text style={[styles.miniToggleText, showStretch && { color: COLORS.silverBright }]}>STRETCH</Text>
+              </TouchableOpacity>
+            </View>
+          } last />
         </Card>
 
-        <SectionLabel>PROFILE</SectionLabel>
-        <Card>
-          <InputRow label="AGE" value={age} onChange={setAge} kbd="number-pad" />
-          <Text style={styles.fieldLabel}>SEX</Text>
-          <View style={styles.pillRow}>
-            <Pill label="MALE" active={sex === 'male'} onPress={() => setSex('male')} />
-            <Pill label="FEMALE" active={sex === 'female'} onPress={() => setSex('female')} />
-          </View>
-          <InputRow label="HEIGHT (CM)" value={height} onChange={setHeight} kbd="number-pad" />
-          <TouchableOpacity style={styles.saveBtn} onPress={saveProfile}>
-            <Text style={styles.saveBtnText}>SAVE PROFILE</Text>
+        {/* Activity section */}
+        <SectionLabel>ACTIVITY DEFAULTS</SectionLabel>
+        <Card style={{ padding: 0 }}>
+          <SettingsRow label="E-bike default" right={
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <TextInput style={[styles.rowInput, { width: 50 }]} value={defaultEbike}
+                onChangeText={setDefaultEbike} keyboardType="number-pad" returnKeyType="done"
+                onSubmitEditing={Keyboard.dismiss} />
+              <Text style={styles.rowUnit}>min</Text>
+            </View>
+          } />
+          <SettingsRow label="Auto-sync steps" right={
+            <Switch
+              value={autoSteps}
+              onValueChange={setAutoSteps}
+              trackColor={{ false: COLORS.background, true: COLORS.purpleImperial }}
+              thumbColor={COLORS.silverBright}
+            />
+          } last />
+        </Card>
+
+        {/* Notifications */}
+        <SectionLabel>NOTIFICATIONS</SectionLabel>
+        <Card style={{ padding: 0 }}>
+          <SettingsRow label="Daily reminder" right={
+            <Switch
+              value={reminderEnabled}
+              onValueChange={setReminderEnabled}
+              trackColor={{ false: COLORS.background, true: COLORS.purpleImperial }}
+              thumbColor={COLORS.silverBright}
+            />
+          } />
+          <SettingsRow label="Time" right={
+            <TextInput style={styles.rowInput} value={reminderTime} onChangeText={setReminderTime}
+              returnKeyType="done" onSubmitEditing={Keyboard.dismiss} />
+          } last />
+        </Card>
+
+        <GradientButton label="SAVE SETTINGS" onPress={saveSettings} style={{ marginBottom: 18 }} />
+
+        {/* Data */}
+        <SectionLabel>DATA</SectionLabel>
+        <Card style={{ padding: 0 }}>
+          <TouchableOpacity onPress={handleReset}>
+            <SettingsRow label="Reset all data" labelColor={COLORS.warning} right={
+              <FontAwesome name="trash" size={14} color={COLORS.warning} />
+            } last />
           </TouchableOpacity>
         </Card>
 
-        <SectionLabel>PROGRAM</SectionLabel>
-        <Card>
-          <InputRow label="START DATE (YYYY-MM-DD)" value={programStart} onChange={setProgramStart} />
-          <Text style={styles.fieldLabel}>TARGET MODE</Text>
-          <View style={styles.pillRow}>
-            <Pill label="REALISTIC" active={!showStretch} onPress={() => setShowStretch(false)} />
-            <Pill label="STRETCH" active={showStretch} onPress={() => setShowStretch(true)} />
-          </View>
+        {/* About */}
+        <SectionLabel>ABOUT</SectionLabel>
+        <Card style={{ padding: 0 }}>
+          <SettingsRow label="Version" right={<Text style={styles.rowValue}>1.0.0</Text>} />
+          <TouchableOpacity onPress={() => setExpandPoem(!expandPoem)}>
+            <View style={[styles.settingsRow, { borderBottomWidth: expandPoem ? 1 : 0 }]}>
+              <Text style={[styles.rowLabel, { color: COLORS.gold, fontFamily: FONTS.serifItalic, fontStyle: 'italic', fontSize: 15 }]}>
+                The Invictus Poem
+              </Text>
+              <FontAwesome name={expandPoem ? 'chevron-up' : 'chevron-down'} size={10} color={COLORS.gold} />
+            </View>
+          </TouchableOpacity>
+          {expandPoem && (
+            <View style={styles.poemContainer}>
+              <Text style={styles.poemText}>
+                Out of the night that covers me,{'\n'}
+                Black as the pit from pole to pole,{'\n'}
+                I thank whatever gods may be{'\n'}
+                For my unconquerable soul.
+              </Text>
+              <Text style={styles.poemStar}>{'\u2734'}</Text>
+              <Text style={styles.poemText}>
+                In the fell clutch of circumstance{'\n'}
+                I have not winced nor cried aloud.{'\n'}
+                Under the bludgeonings of chance{'\n'}
+                My head is bloody, but unbowed.
+              </Text>
+              <Text style={styles.poemStar}>{'\u2734'}</Text>
+              <Text style={styles.poemText}>
+                Beyond this place of wrath and tears{'\n'}
+                Looms but the Horror of the shade,{'\n'}
+                And yet the menace of the years{'\n'}
+                Finds, and shall find me, unafraid.
+              </Text>
+              <Text style={styles.poemStar}>{'\u2734'}</Text>
+              <Text style={styles.poemText}>
+                It matters not how strait the gate,{'\n'}
+                How charged with punishments the scroll,{'\n'}
+                I am the master of my fate,{'\n'}
+                I am the captain of my soul.
+              </Text>
+              <Text style={styles.poemAttrib}>{'\u2014'} W. E. HENLEY {'\u00B7'} 1875</Text>
+            </View>
+          )}
         </Card>
 
-        <SectionLabel>ACTIVITY</SectionLabel>
-        <Card>
-          <Text style={styles.fieldLabel}>AUTO-SYNC STEPS</Text>
-          <View style={styles.pillRow}>
-            <Pill label="ON" active={autoSteps} onPress={() => setAutoSteps(true)} />
-            <Pill label="OFF" active={!autoSteps} onPress={() => setAutoSteps(false)} />
-          </View>
-          <InputRow label="DEFAULT E-BIKE MIN/DAY" value={defaultEbike} onChange={setDefaultEbike} kbd="number-pad" />
-        </Card>
-
-        <SectionLabel>REMINDERS</SectionLabel>
-        <Card>
-          <Text style={styles.fieldLabel}>DAILY REMINDER</Text>
-          <View style={styles.pillRow}>
-            <Pill label="ON" active={reminderEnabled} onPress={() => setReminderEnabled(true)} />
-            <Pill label="OFF" active={!reminderEnabled} onPress={() => setReminderEnabled(false)} />
-          </View>
-          {reminderEnabled && <InputRow label="TIME (HH:MM)" value={reminderTime} onChange={setReminderTime} />}
-        </Card>
-
-        <TouchableOpacity style={styles.saveBtn} onPress={saveSettings}>
-          <Text style={styles.saveBtnText}>SAVE SETTINGS</Text>
-        </TouchableOpacity>
-
-        <View style={{ height: 24 }} />
-
-        <TouchableOpacity style={styles.dangerBtn} onPress={handleReset}>
-          <Text style={styles.dangerText}>RESET ALL DATA</Text>
-        </TouchableOpacity>
-
-        <Text style={styles.footer}>{'\u2670'} INVICTUS {'\u2670'}</Text>
+        <Text style={styles.footer}>{'\u2670'} INVICTVS {'\u2670'}</Text>
         <Text style={styles.footerSub}>I am the captain of my soul</Text>
       </ScrollView>
     </View>
   );
 }
 
-function InputRow({ label, value, onChange, kbd }: { label: string; value: string; onChange: (v: string) => void; kbd?: any }) {
+function SettingsRow({ label, right, last, labelColor }: {
+  label: string; right: React.ReactNode; last?: boolean; labelColor?: string;
+}) {
   return (
-    <View style={styles.inputGroup}>
-      <Text style={styles.fieldLabel}>{label}</Text>
-      <TextInput
-        style={styles.input}
-        value={value}
-        onChangeText={onChange}
-        keyboardType={kbd || 'default'}
-        placeholderTextColor={COLORS.textMuted}
-        returnKeyType="done"
-        onSubmitEditing={() => Keyboard.dismiss()}
-      />
+    <View style={[styles.settingsRow, !last && { borderBottomWidth: 1 }]}>
+      <Text style={[styles.rowLabel, labelColor ? { color: labelColor } : undefined]}>{label}</Text>
+      {right}
     </View>
-  );
-}
-
-function Pill({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      style={[styles.pill, active && styles.pillActive]}
-    >
-      <Text style={[styles.pillText, active && styles.pillTextActive]}>{label}</Text>
-    </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  closeBtn: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: COLORS.ghostBorder, alignItems: 'center', justifyContent: 'center' },
-  closeText: { fontSize: 16, color: COLORS.textPrimary, fontFamily: mono },
-  title: { fontSize: 18, fontFamily: 'Cinzel_700Bold', color: COLORS.silverBright, letterSpacing: 3 },
+  topBar: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: COLORS.border,
+  },
+  backBtn: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: COLORS.borderBright, alignItems: 'center', justifyContent: 'center' },
+  title: { fontSize: 26, fontFamily: FONTS.serif, color: COLORS.silverBright },
   scroll: { flex: 1 },
-  content: { paddingHorizontal: 16, paddingTop: 12 },
-  inputGroup: { marginBottom: 16 },
-  fieldLabel: { fontSize: 10, color: COLORS.label, fontFamily: mono, letterSpacing: 1.5, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase' },
-  input: { backgroundColor: COLORS.background, borderWidth: 1, borderColor: COLORS.border, borderRadius: 8, padding: 12, fontSize: 16, color: COLORS.textPrimary, fontFamily: mono },
-  pillRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
-  pill: { flex: 1, borderWidth: 1, borderColor: COLORS.ghostBorder, borderRadius: 8, paddingVertical: 10, alignItems: 'center' },
-  pillActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  pillText: { fontSize: 11, fontWeight: '700', color: COLORS.textSecondary, fontFamily: mono, letterSpacing: 1 },
-  pillTextActive: { color: '#E8EAF0' },
-  saveBtn: { backgroundColor: COLORS.primary, borderRadius: 8, paddingVertical: 14, alignItems: 'center', marginTop: 8 },
-  saveBtnText: { fontSize: 13, fontWeight: '900', color: '#E8EAF0', fontFamily: mono, letterSpacing: 2 },
-  dangerBtn: { borderWidth: 1, borderColor: COLORS.danger, borderRadius: 8, paddingVertical: 14, alignItems: 'center' },
-  dangerText: { fontSize: 12, fontWeight: '700', color: COLORS.danger, fontFamily: mono, letterSpacing: 1 },
-  footer: { fontSize: 12, color: COLORS.silver, fontFamily: mono, textAlign: 'center', marginTop: 32, fontWeight: '700', letterSpacing: 2 },
-  footerSub: { fontSize: 9, color: COLORS.textMuted, fontFamily: mono, textAlign: 'center', marginTop: 4, fontStyle: 'italic' },
+  scrollContent: { paddingHorizontal: 16, paddingTop: 12 },
+
+  settingsRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingVertical: 14, paddingHorizontal: 18, borderBottomColor: COLORS.border,
+  },
+  rowLabel: { fontSize: 15, fontFamily: FONTS.serif, color: COLORS.silverBright },
+  rowValue: { fontSize: 13, fontFamily: FONTS.mono, color: COLORS.silverDim },
+  rowInput: {
+    fontSize: 13, fontFamily: FONTS.mono, color: COLORS.silverDim,
+    textAlign: 'right', padding: 0, minWidth: 60,
+  },
+  rowUnit: { fontSize: 10, fontFamily: FONTS.mono, color: COLORS.textMuted },
+
+  miniToggle: {
+    flexDirection: 'row', gap: 4, padding: 3,
+    backgroundColor: COLORS.background, borderRadius: 7, borderWidth: 1, borderColor: COLORS.borderBright,
+  },
+  miniToggleBtn: { paddingVertical: 4, paddingHorizontal: 10, borderRadius: 5 },
+  miniToggleBtnActive: { backgroundColor: COLORS.purpleImperial },
+  miniToggleText: { fontSize: 9, fontFamily: FONTS.mono, color: COLORS.textMuted, letterSpacing: 1.2, textTransform: 'uppercase' },
+
+  poemContainer: { paddingVertical: 14, paddingHorizontal: 18, alignItems: 'center' },
+  poemText: { fontFamily: FONTS.serif, fontSize: 13, color: COLORS.silver, lineHeight: 22, textAlign: 'center' },
+  poemStar: { fontSize: 8, color: COLORS.gold, marginVertical: 14 },
+  poemAttrib: { fontSize: 9, fontFamily: FONTS.mono, color: COLORS.textMuted, letterSpacing: 1.5, marginTop: 14, textTransform: 'uppercase' },
+
+  footer: { fontSize: 12, fontFamily: FONTS.mono, color: COLORS.silver, textAlign: 'center', marginTop: 32, fontWeight: '700', letterSpacing: 2 },
+  footerSub: { fontSize: 9, fontFamily: FONTS.mono, color: COLORS.textMuted, textAlign: 'center', marginTop: 4, fontStyle: 'italic' },
 });

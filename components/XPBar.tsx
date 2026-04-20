@@ -65,7 +65,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   levelBadge: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   levelIcon: { fontSize: 22 },
-  levelName: { fontSize: 14, fontFamily: 'Cinzel_700Bold', color: COLORS.gold, letterSpacing: 1.5, textTransform: 'uppercase' },
+  levelName: { fontSize: 14, fontFamily: 'CormorantGaramond_700Bold', color: COLORS.gold, letterSpacing: 1.5, textTransform: 'uppercase' },
   xpText: { fontSize: 16, fontWeight: '900', color: COLORS.textPrimary, fontFamily: mono },
   track: { height: 8, backgroundColor: COLORS.border, borderRadius: 4, overflow: 'hidden' },
   fillWrap: { height: 8, borderRadius: 4, overflow: 'hidden' },

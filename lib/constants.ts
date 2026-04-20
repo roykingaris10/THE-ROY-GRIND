@@ -1,12 +1,21 @@
 import type { Block, Benchmark, NutritionPhase } from '@/types';
 
 export const COLORS = {
-  background: '#0A0814',
-  card: '#15121F',
-  border: '#2A2438',
+  background: '#07060C',
+  backgroundSecondary: '#0E0B18',
+  backgroundTertiary: '#15111F',
+  card: '#0E0B18',
+  border: '#221C33',
+  borderBright: '#2E2745',
   primary: '#6B4E9E',
   primaryDark: '#3D2E5F',
   secondary: '#8B7FB8',
+  purpleBlue: '#4C4AA8',
+  purpleImperial: '#6B4E9E',
+  purpleDeep: '#3D2E5F',
+  purpleWarm: '#8B7FB8',
+  teal: '#5FD4C2',
+  tealDim: '#3A8F82',
   warning: '#B67575',
   squat: '#8FA8C9',
   bench: '#C9A88F',
@@ -18,7 +27,7 @@ export const COLORS = {
   textSecondary: '#8B8799',
   textMuted: '#55525F',
   label: '#8B8799',
-  ghostBorder: '#2A2438',
+  ghostBorder: '#2E2745',
   success: '#8FB396',
   danger: '#B67575',
   xp: '#6B4E9E',
@@ -27,10 +36,13 @@ export const COLORS = {
   incense: '#C9A961',
   silver: '#C4C9D4',
   silverBright: '#E8EAF0',
+  silverDim: '#8B8FA0',
   gold: '#C9A961',
   starlight: '#A8C4D9',
-  purpleWarm: '#8B7FB8',
   purpleGlow: '#3D2E5F',
+  gradientBtnTop: '#7359a8',
+  gradientBtnBottom: '#5a4188',
+  gradientBtnBorder: '#8670b8',
 } as const;
 
 export const PROGRAM_START_DEFAULT = '2026-04-14';

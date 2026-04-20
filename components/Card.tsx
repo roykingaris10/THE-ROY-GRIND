@@ -2,6 +2,7 @@ import React from 'react';
 import { View, StyleSheet, Text, Platform } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { COLORS } from '@/lib/constants';
+import { FONTS } from '@/lib/typography';
 
 interface CardProps {
   children: React.ReactNode;
@@ -35,32 +36,42 @@ export function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
+export function HairlineDivider() {
+  return (
+    <View style={styles.hairline}>
+      <View style={styles.hairlineLine} />
+      <Text style={styles.hairlineStar}>{'\u2734'}</Text>
+      <View style={styles.hairlineLine} />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   card: {
     backgroundColor: COLORS.card,
     borderWidth: 1,
     borderColor: COLORS.border,
     borderRadius: 14,
-    padding: 16,
+    padding: 18,
     marginBottom: 12,
     ...Platform.select({
       ios: {
         shadowColor: '#6B4E9E',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.12,
-        shadowRadius: 12,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
       },
       android: {
-        elevation: 6,
+        elevation: 4,
       },
     }),
   },
   cardGlow: {
     ...Platform.select({
       ios: {
-        shadowColor: COLORS.gold,
-        shadowOpacity: 0.2,
-        shadowRadius: 16,
+        shadowColor: '#6B4E9E',
+        shadowOpacity: 0.15,
+        shadowRadius: 20,
       },
       android: {
         elevation: 8,
@@ -69,10 +80,26 @@ const styles = StyleSheet.create({
   },
   labelContainer: { marginBottom: 8, marginTop: 4 },
   label: {
-    fontSize: 10,
+    fontSize: 9,
     textTransform: 'uppercase',
     letterSpacing: 1.5,
-    color: COLORS.label,
-    fontFamily: Platform.select({ ios: 'Menlo', default: 'monospace' }),
+    color: COLORS.textMuted,
+    fontFamily: FONTS.mono,
+  },
+  hairline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginVertical: 10,
+  },
+  hairlineLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: COLORS.borderBright,
+    opacity: 0.5,
+  },
+  hairlineStar: {
+    fontSize: 8,
+    color: COLORS.silverDim,
   },
 });

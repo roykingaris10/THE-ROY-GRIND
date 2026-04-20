@@ -1,23 +1,22 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
-  TextInput,
   TouchableOpacity,
   Platform,
   ActivityIndicator,
   Keyboard,
   InputAccessoryView,
 } from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useAppData } from '@/hooks/useAppData';
 import { useCurrentProgram } from '@/hooks/useCurrentProgram';
 import { useCalorieBalance } from '@/hooks/useCalorieBalance';
-import { getDateString, addDays, formatDate, clamp } from '@/lib/helpers';
+import { getDateString, addDays, formatDate } from '@/lib/helpers';
 import { COLORS } from '@/lib/constants';
 import { FONTS } from '@/lib/typography';
 import { playTap, playSelection } from '@/lib/sounds';
@@ -29,7 +28,6 @@ import { ActivityInputCard } from '@/components/ActivityInputCard';
 import { TDEEBreakdownView } from '@/components/TDEEBreakdown';
 import { DebouncedInput } from '@/components/DebouncedInput';
 
-const mono = Platform.select({ ios: 'Menlo', default: 'monospace' });
 const TODAY = getDateString(new Date());
 const INPUT_ACCESSORY_ID = 'log-input-done';
 
@@ -49,12 +47,9 @@ export default function LogScreen() {
   useEffect(() => {
     if (!data || selectedDate !== TODAY) return;
     if (!data.settings.autoSyncSteps) return;
-
     (async () => {
       const steps = await getTodaySteps();
-      if (steps != null) {
-        updateEntry(selectedDate, { steps, stepsAutoSynced: true });
-      }
+      if (steps != null) updateEntry(selectedDate, { steps, stepsAutoSynced: true });
     })();
   }, [data?.settings?.autoSyncSteps, selectedDate]);
 
@@ -92,25 +87,10 @@ export default function LogScreen() {
   const session = data?.sessions.find(s => s.date === selectedDate) || null;
   const trainingBurn = tdee.training;
   const trainingDuration = session?.startTime && session?.endTime
-    ? Math.round(
-        (new Date(session.endTime).getTime() - new Date(session.startTime).getTime()) / 60000,
-      )
-    : null;
+    ? Math.round((new Date(session.endTime).getTime() - new Date(session.startTime).getTime()) / 60000) : null;
 
-  const calInRange =
-    (entry.calories || 0) === 0 ||
-    ((entry.calories || 0) >= target.min && (entry.calories || 0) <= target.max);
-  const proteinInRange =
-    (entry.protein || 0) === 0 ||
-    ((entry.protein || 0) >= nutritionPhase.protein[0] &&
-      (entry.protein || 0) <= nutritionPhase.protein[1]);
-  const carbsInRange =
-    (entry.carbs || 0) === 0 ||
-    ((entry.carbs || 0) >= nutritionPhase.carbs[0] &&
-      (entry.carbs || 0) <= nutritionPhase.carbs[1]);
-  const fatInRange =
-    (entry.fat || 0) === 0 ||
-    ((entry.fat || 0) >= nutritionPhase.fat[0] && (entry.fat || 0) <= nutritionPhase.fat[1]);
+  const calInRange = (entry.calories || 0) === 0 || ((entry.calories || 0) >= target.min && (entry.calories || 0) <= target.max);
+  const proteinInRange = (entry.protein || 0) === 0 || ((entry.protein || 0) >= nutritionPhase.protein[0] && (entry.protein || 0) <= nutritionPhase.protein[1]);
 
   if (loading || !data) {
     return (
@@ -122,7 +102,6 @@ export default function LogScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* Done button for numeric keyboards */}
       {Platform.OS === 'ios' && (
         <InputAccessoryView nativeID={INPUT_ACCESSORY_ID}>
           <View style={styles.accessoryBar}>
@@ -133,23 +112,23 @@ export default function LogScreen() {
         </InputAccessoryView>
       )}
 
-      {/* Date picker */}
-      <View style={styles.datePicker}>
-        <TouchableOpacity onPress={goBack} style={styles.arrow} activeOpacity={0.6}>
-          <Text style={styles.arrowText}>{'\u25C0'}</Text>
-        </TouchableOpacity>
-        <View style={styles.dateCenter}>
-          <Text style={styles.dateText}>{formatDate(selectedDate)}</Text>
-          <Text style={styles.dateSub}>{selectedDate}</Text>
+      {/* Header */}
+      <View style={styles.headerSection}>
+        <View>
+          <Text style={styles.headerTitle}>Daily Log</Text>
+          <Text style={styles.headerSub}>
+            {new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase()} {'\u00B7'} {formatDate(selectedDate).toUpperCase()}
+          </Text>
         </View>
-        <TouchableOpacity onPress={goForward} style={styles.arrow} activeOpacity={0.6}>
-          <Text style={styles.arrowText}>{'\u25B6'}</Text>
-        </TouchableOpacity>
-        {selectedDate !== TODAY && (
-          <TouchableOpacity onPress={goToday} style={styles.todayBtn} activeOpacity={0.7}>
-            <Text style={styles.todayText}>TODAY</Text>
-          </TouchableOpacity>
-        )}
+        <View style={styles.dateNav}>
+          <TouchableOpacity onPress={goBack} style={styles.navArrow}><Text style={styles.navArrowText}>{'\u25C0'}</Text></TouchableOpacity>
+          <TouchableOpacity onPress={goForward} style={styles.navArrow}><Text style={styles.navArrowText}>{'\u25B6'}</Text></TouchableOpacity>
+          {selectedDate !== TODAY && (
+            <TouchableOpacity onPress={goToday} style={styles.todayBtn}>
+              <Text style={styles.todayText}>TODAY</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       <ScrollView
@@ -159,144 +138,82 @@ export default function LogScreen() {
         keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
       >
-        {/* Daily balance */}
-        <CalorieBalanceCard
-          caloriesIn={caloriesIn}
-          tdee={tdee}
-          target={target}
-          status={status}
-          compact
-        />
+        {/* Balance summary */}
+        <Card style={{ marginBottom: 12 }} glow>
+          <Text style={styles.cardLabel}>DAILY BALANCE</Text>
+          <View style={styles.balanceGrid}>
+            <View>
+              <Text style={styles.balanceSub}>IN</Text>
+              <Text style={styles.balanceNum}>{caloriesIn.toLocaleString()}</Text>
+            </View>
+            <View style={styles.balanceDivider}>
+              <Text style={styles.balanceSub}>OUT</Text>
+              <Text style={[styles.balanceNum, { color: COLORS.purpleWarm }]}>{tdee.total.toLocaleString()}</Text>
+            </View>
+            <View style={{ paddingLeft: 10 }}>
+              <Text style={styles.balanceSub}>NET</Text>
+              <Text style={[styles.balanceNum, { color: netBalance < 0 ? COLORS.success : COLORS.warning }]}>
+                {netBalance < 0 ? '\u2212' : '+'}{Math.abs(netBalance).toLocaleString()}
+              </Text>
+            </View>
+          </View>
+        </Card>
 
         {/* Body */}
-        <SectionLabel>BODY</SectionLabel>
         <Card delay={50}>
-          <View style={styles.row}>
-            <View style={styles.halfInput}>
-              <Text style={styles.inputLabel}>Weight (kg)</Text>
-              <DebouncedInput
-                style={styles.input}
-                value={entry.weight != null ? String(entry.weight) : ''}
-                onDebouncedChange={handleFieldUpdate('weight', parseFloat)}
-                keyboardType="decimal-pad"
-                placeholder="\u2014"
-                placeholderTextColor={COLORS.textMuted}
-                inputAccessoryViewID={Platform.OS === 'ios' ? INPUT_ACCESSORY_ID : undefined}
-              />
-            </View>
-            <View style={styles.halfInput}>
-              <Text style={styles.inputLabel}>Waist (cm)</Text>
-              <DebouncedInput
-                style={styles.input}
-                value={entry.waist != null ? String(entry.waist) : ''}
-                onDebouncedChange={handleFieldUpdate('waist', parseFloat)}
-                keyboardType="decimal-pad"
-                placeholder="\u2014"
-                placeholderTextColor={COLORS.textMuted}
-                inputAccessoryViewID={Platform.OS === 'ios' ? INPUT_ACCESSORY_ID : undefined}
-              />
-            </View>
+          <Text style={styles.cardLabel}>BODY</Text>
+          <View style={styles.inputGrid}>
+            <InputCell
+              label="WEIGHT" unit="kg"
+              value={entry.weight != null ? String(entry.weight) : ''}
+              onDebouncedChange={handleFieldUpdate('weight', parseFloat)}
+              accessoryId={INPUT_ACCESSORY_ID}
+            />
+            <InputCell
+              label="WAIST" unit="cm"
+              value={entry.waist != null ? String(entry.waist) : ''}
+              onDebouncedChange={handleFieldUpdate('waist', parseFloat)}
+              accessoryId={INPUT_ACCESSORY_ID}
+            />
           </View>
         </Card>
 
         {/* Nutrition */}
-        <SectionLabel>NUTRITION IN</SectionLabel>
-        <Card
-          delay={100}
-          borderColor={
-            (entry.calories || 0) > 0
-              ? calInRange ? COLORS.success : COLORS.primary
-              : undefined
-          }
-        >
-          <Text style={styles.phaseTag}>
-            {nutritionPhase.name} \u2014 Week {week}
+        <Card delay={100}>
+          <View style={styles.nutritionHeader}>
+            <Text style={styles.cardLabel}>NUTRITION</Text>
+            {(entry.calories || 0) > 0 && calInRange && (
+              <Text style={[styles.capsSmColor, { color: COLORS.success }]}>{'\u2713'} IN TARGET</Text>
+            )}
+          </View>
+          <View style={styles.inputGrid}>
+            <InputCell label="CALORIES" unit="kcal"
+              value={entry.calories != null ? String(entry.calories) : ''}
+              onDebouncedChange={handleFieldUpdate('calories', t => parseInt(t))}
+              status={(entry.calories || 0) > 0 ? (calInRange ? 'good' : 'warn') : 'ok'}
+              accessoryId={INPUT_ACCESSORY_ID} numPad />
+            <InputCell label="PROTEIN" unit="g"
+              value={entry.protein != null ? String(entry.protein) : ''}
+              onDebouncedChange={handleFieldUpdate('protein', t => parseInt(t))}
+              status={(entry.protein || 0) > 0 ? (proteinInRange ? 'good' : 'warn') : 'ok'}
+              accessoryId={INPUT_ACCESSORY_ID} numPad />
+            <InputCell label="CARBS" unit="g"
+              value={entry.carbs != null ? String(entry.carbs) : ''}
+              onDebouncedChange={handleFieldUpdate('carbs', t => parseInt(t))}
+              accessoryId={INPUT_ACCESSORY_ID} numPad />
+            <InputCell label="FAT" unit="g"
+              value={entry.fat != null ? String(entry.fat) : ''}
+              onDebouncedChange={handleFieldUpdate('fat', t => parseInt(t))}
+              accessoryId={INPUT_ACCESSORY_ID} numPad />
+          </View>
+          <Text style={styles.phaseHint}>
+            PHASE TARGET: {target.min.toLocaleString()}-{target.max.toLocaleString()} KCAL {'\u00B7'} {nutritionPhase.protein[0]}-{nutritionPhase.protein[1]}G PROTEIN
           </Text>
-          <View style={styles.row}>
-            <View style={styles.halfInput}>
-              <Text style={styles.inputLabel}>
-                Calories ({target.min}\u2013{target.max})
-              </Text>
-              <DebouncedInput
-                style={[
-                  styles.input,
-                  (entry.calories || 0) > 0 && {
-                    borderColor: calInRange ? COLORS.success : COLORS.primary,
-                  },
-                ]}
-                value={entry.calories != null ? String(entry.calories) : ''}
-                onDebouncedChange={handleFieldUpdate('calories', (t) => parseInt(t))}
-                keyboardType="number-pad"
-                placeholder="kcal"
-                placeholderTextColor={COLORS.textMuted}
-                inputAccessoryViewID={Platform.OS === 'ios' ? INPUT_ACCESSORY_ID : undefined}
-              />
-            </View>
-            <View style={styles.halfInput}>
-              <Text style={styles.inputLabel}>
-                Protein ({nutritionPhase.protein[0]}\u2013{nutritionPhase.protein[1]}g)
-              </Text>
-              <DebouncedInput
-                style={[
-                  styles.input,
-                  (entry.protein || 0) > 0 && {
-                    borderColor: proteinInRange ? COLORS.success : COLORS.primary,
-                  },
-                ]}
-                value={entry.protein != null ? String(entry.protein) : ''}
-                onDebouncedChange={handleFieldUpdate('protein', (t) => parseInt(t))}
-                keyboardType="number-pad"
-                placeholder="g"
-                placeholderTextColor={COLORS.textMuted}
-                inputAccessoryViewID={Platform.OS === 'ios' ? INPUT_ACCESSORY_ID : undefined}
-              />
-            </View>
-          </View>
-          <View style={styles.row}>
-            <View style={styles.halfInput}>
-              <Text style={styles.inputLabel}>
-                Carbs ({nutritionPhase.carbs[0]}\u2013{nutritionPhase.carbs[1]}g)
-              </Text>
-              <DebouncedInput
-                style={[
-                  styles.input,
-                  (entry.carbs || 0) > 0 && {
-                    borderColor: carbsInRange ? COLORS.success : COLORS.primary,
-                  },
-                ]}
-                value={entry.carbs != null ? String(entry.carbs) : ''}
-                onDebouncedChange={handleFieldUpdate('carbs', (t) => parseInt(t))}
-                keyboardType="number-pad"
-                placeholder="g"
-                placeholderTextColor={COLORS.textMuted}
-                inputAccessoryViewID={Platform.OS === 'ios' ? INPUT_ACCESSORY_ID : undefined}
-              />
-            </View>
-            <View style={styles.halfInput}>
-              <Text style={styles.inputLabel}>
-                Fat ({nutritionPhase.fat[0]}\u2013{nutritionPhase.fat[1]}g)
-              </Text>
-              <DebouncedInput
-                style={[
-                  styles.input,
-                  (entry.fat || 0) > 0 && {
-                    borderColor: fatInRange ? COLORS.success : COLORS.primary,
-                  },
-                ]}
-                value={entry.fat != null ? String(entry.fat) : ''}
-                onDebouncedChange={handleFieldUpdate('fat', (t) => parseInt(t))}
-                keyboardType="number-pad"
-                placeholder="g"
-                placeholderTextColor={COLORS.textMuted}
-                inputAccessoryViewID={Platform.OS === 'ios' ? INPUT_ACCESSORY_ID : undefined}
-              />
-            </View>
-          </View>
         </Card>
 
         {/* Activity */}
-        <SectionLabel>ACTIVITY OUT</SectionLabel>
         <Card delay={150}>
+          <Text style={styles.cardLabel}>ACTIVITY</Text>
           <ActivityInputCard
             steps={entry.steps}
             stepsAutoSynced={entry.stepsAutoSynced || false}
@@ -310,243 +227,143 @@ export default function LogScreen() {
           />
         </Card>
 
-        {/* TDEE */}
-        <TouchableOpacity
-          onPress={() => {
-            playTap();
-            setTdeeExpanded(prev => !prev);
-          }}
-          activeOpacity={0.7}
-        >
-          <SectionLabel>{tdeeExpanded ? 'TDEE BREAKDOWN \u25BE' : 'TDEE BREAKDOWN \u25B8'}</SectionLabel>
-        </TouchableOpacity>
-        {tdeeExpanded && (
-          <Card delay={0}>
-            <TDEEBreakdownView tdee={tdee} currentWeight={currentWeight} />
-          </Card>
-        )}
-
         {/* Recovery */}
-        <SectionLabel>RECOVERY</SectionLabel>
         <Card delay={200}>
-          <View style={styles.row}>
-            <View style={styles.halfInput}>
-              <Text style={styles.inputLabel}>Sleep (hrs)</Text>
-              <DebouncedInput
-                style={styles.input}
-                value={entry.sleep != null ? String(entry.sleep) : ''}
-                onDebouncedChange={handleFieldUpdate('sleep', parseFloat)}
-                keyboardType="decimal-pad"
-                placeholder="\u2014"
-                placeholderTextColor={COLORS.textMuted}
-                inputAccessoryViewID={Platform.OS === 'ios' ? INPUT_ACCESSORY_ID : undefined}
-              />
-            </View>
-            <View style={styles.halfInput}>
-              <Text style={styles.inputLabel}>Resting HR</Text>
-              <DebouncedInput
-                style={styles.input}
-                value={entry.restingHR != null ? String(entry.restingHR) : ''}
-                onDebouncedChange={handleFieldUpdate('restingHR', (t) => parseInt(t))}
-                keyboardType="number-pad"
-                placeholder="bpm"
-                placeholderTextColor={COLORS.textMuted}
-                inputAccessoryViewID={Platform.OS === 'ios' ? INPUT_ACCESSORY_ID : undefined}
-              />
-            </View>
+          <Text style={styles.cardLabel}>RECOVERY</Text>
+          <View style={styles.recoveryGrid}>
+            <InputCell label="SLEEP" unit="hrs"
+              value={entry.sleep != null ? String(entry.sleep) : ''}
+              onDebouncedChange={handleFieldUpdate('sleep', parseFloat)}
+              accessoryId={INPUT_ACCESSORY_ID} />
+            <InputCell label="REST HR" unit="bpm"
+              value={entry.restingHR != null ? String(entry.restingHR) : ''}
+              onDebouncedChange={handleFieldUpdate('restingHR', t => parseInt(t))}
+              accessoryId={INPUT_ACCESSORY_ID} numPad />
+            <InputCell label="HRV" unit="ms"
+              value={entry.hrv != null ? String(entry.hrv) : ''}
+              onDebouncedChange={handleFieldUpdate('hrv', t => parseInt(t))}
+              accessoryId={INPUT_ACCESSORY_ID} numPad />
           </View>
-          <View style={[styles.row, { marginBottom: 0 }]}>
-            <View style={styles.halfInput}>
-              <Text style={styles.inputLabel}>HRV</Text>
-              <DebouncedInput
-                style={styles.input}
-                value={entry.hrv != null ? String(entry.hrv) : ''}
-                onDebouncedChange={handleFieldUpdate('hrv', (t) => parseInt(t))}
-                keyboardType="number-pad"
-                placeholder="ms"
-                placeholderTextColor={COLORS.textMuted}
-                inputAccessoryViewID={Platform.OS === 'ios' ? INPUT_ACCESSORY_ID : undefined}
-              />
-            </View>
-            <View style={styles.halfInput} />
-          </View>
-
           <View style={styles.sliderGroup}>
-            <SliderInput
-              label="Recovery"
-              value={entry.recovery || 5}
-              onChange={v => immediateUpdate('recovery', v)}
-            />
-            <SliderInput
-              label="Energy"
-              value={entry.energy || 5}
-              onChange={v => immediateUpdate('energy', v)}
-            />
-            <SliderInput
-              label="Mood"
-              value={entry.mood || 5}
-              onChange={v => immediateUpdate('mood', v)}
-            />
+            <SliderInput label="Recovery" value={entry.recovery || 5} onChange={v => immediateUpdate('recovery', v)} />
+            <SliderInput label="Energy" value={entry.energy || 5} onChange={v => immediateUpdate('energy', v)} />
+            <SliderInput label="Mood" value={entry.mood || 5} onChange={v => immediateUpdate('mood', v)} />
           </View>
         </Card>
 
         {/* Notes */}
-        <SectionLabel>NOTES</SectionLabel>
         <Card delay={250}>
+          <Text style={styles.cardLabel}>NOTES</Text>
           <DebouncedInput
             style={styles.notesInput}
             value={entry.notes || ''}
             onDebouncedChange={text => updateEntry(selectedDate, { notes: text })}
             placeholder="How did today go? Anything to note..."
             placeholderTextColor={COLORS.textMuted}
-            multiline
-            numberOfLines={4}
-            textAlignVertical="top"
-            returnKeyType="default"
-            onSubmitEditing={undefined}
+            multiline numberOfLines={4} textAlignVertical="top"
+            returnKeyType="default" onSubmitEditing={undefined}
           />
         </Card>
+
+        {/* TDEE */}
+        <TouchableOpacity onPress={() => { playTap(); setTdeeExpanded(prev => !prev); }} activeOpacity={0.7}>
+          <Card delay={0}>
+            <View style={styles.tdeeHeader}>
+              <Text style={styles.cardLabel}>TDEE BREAKDOWN</Text>
+              <View style={styles.tdeeRight}>
+                <Text style={styles.tdeeTotal}>{tdee.total.toLocaleString()} KCAL</Text>
+                <FontAwesome name={tdeeExpanded ? 'chevron-up' : 'chevron-down'} size={10} color={COLORS.silverDim} />
+              </View>
+            </View>
+            {tdeeExpanded && <TDEEBreakdownView tdee={tdee} currentWeight={currentWeight} />}
+          </Card>
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );
 }
 
+function InputCell({ label, unit, value, onDebouncedChange, status = 'ok', accessoryId, numPad }: {
+  label: string; unit: string; value: string; onDebouncedChange: (t: string) => void;
+  status?: 'ok' | 'good' | 'warn'; accessoryId?: string; numPad?: boolean;
+}) {
+  const borderColors = { ok: COLORS.border, good: 'rgba(143,179,150,0.45)', warn: 'rgba(182,117,117,0.45)' };
+  return (
+    <View style={[styles.inputCell, { borderColor: borderColors[status] }]}>
+      <Text style={styles.inputCellLabel}>{label}</Text>
+      <View style={styles.inputCellRow}>
+        <DebouncedInput
+          style={styles.inputCellValue}
+          value={value}
+          onDebouncedChange={onDebouncedChange}
+          keyboardType={numPad ? 'number-pad' : 'decimal-pad'}
+          placeholder="\u2014"
+          placeholderTextColor={COLORS.textMuted}
+          inputAccessoryViewID={Platform.OS === 'ios' ? accessoryId : undefined}
+        />
+        <Text style={styles.inputCellUnit}>{unit}</Text>
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 16,
-  },
+  container: { flex: 1, backgroundColor: COLORS.background },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  scroll: { flex: 1 },
+  scrollContent: { paddingHorizontal: 16 },
 
   accessoryBar: {
-    backgroundColor: COLORS.card,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    backgroundColor: COLORS.card, borderTopWidth: 1, borderTopColor: COLORS.border,
+    flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 16, paddingVertical: 8,
   },
-  doneBtn: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-  doneBtnText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#E8EAF0',
-    fontFamily: mono,
-  },
+  doneBtn: { backgroundColor: COLORS.primary, paddingHorizontal: 16, paddingVertical: 6, borderRadius: 6 },
+  doneBtnText: { fontSize: 14, fontWeight: '700', color: COLORS.silverBright, fontFamily: FONTS.mono },
 
-  datePicker: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+  headerSection: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start',
+    paddingHorizontal: 16, paddingTop: 14, paddingBottom: 12,
   },
-  arrow: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  arrowText: {
-    fontSize: 16,
-    color: COLORS.textPrimary,
-    fontFamily: mono,
-  },
-  dateCenter: {
-    alignItems: 'center',
-    minWidth: 120,
-  },
-  dateText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-    fontFamily: mono,
-  },
-  dateSub: {
-    fontSize: 10,
-    color: COLORS.textMuted,
-    fontFamily: mono,
-    marginTop: 2,
-  },
-  todayBtn: {
-    position: 'absolute',
-    right: 16,
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
-  },
-  todayText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#fff',
-    fontFamily: mono,
-    letterSpacing: 1,
-  },
+  headerTitle: { fontSize: 26, fontFamily: FONTS.serif, color: COLORS.silverBright },
+  headerSub: { fontSize: 9, fontFamily: FONTS.mono, color: COLORS.textMuted, letterSpacing: 1.5, marginTop: 4, textTransform: 'uppercase' },
+  dateNav: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  navArrow: { padding: 6 },
+  navArrowText: { fontSize: 12, color: COLORS.silverDim },
+  todayBtn: { backgroundColor: COLORS.primary, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  todayText: { fontSize: 9, fontFamily: FONTS.mono, color: COLORS.silverBright, letterSpacing: 1 },
 
-  row: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 12,
-  },
-  halfInput: {
-    flex: 1,
-  },
-  inputLabel: {
-    fontSize: 10,
-    color: COLORS.textSecondary,
-    fontFamily: mono,
-    marginBottom: 6,
-    letterSpacing: 0.5,
-  },
-  input: {
-    backgroundColor: COLORS.background,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 10,
-    padding: 12,
-    fontSize: 16,
-    color: COLORS.textPrimary,
-    fontFamily: mono,
-  },
-  phaseTag: {
-    fontSize: 10,
-    color: COLORS.primary,
-    fontFamily: mono,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-    marginBottom: 12,
-  },
+  cardLabel: { fontSize: 10, fontFamily: FONTS.mono, color: COLORS.silverDim, letterSpacing: 1.8, textTransform: 'uppercase', marginBottom: 12 },
 
-  sliderGroup: {
-    marginTop: 16,
+  balanceGrid: { flexDirection: 'row', justifyContent: 'space-between' },
+  balanceSub: { fontSize: 9, fontFamily: FONTS.mono, color: COLORS.textMuted, letterSpacing: 1.5, marginBottom: 4, textTransform: 'uppercase' },
+  balanceNum: { fontSize: 22, fontFamily: FONTS.serif, color: COLORS.silverBright },
+  balanceDivider: { borderLeftWidth: 1, borderRightWidth: 1, borderColor: COLORS.border, paddingHorizontal: 10 },
+
+  inputGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
+  recoveryGrid: { flexDirection: 'row', gap: 8, marginBottom: 16 },
+
+  inputCell: {
+    flex: 1, minWidth: '45%', padding: 10, backgroundColor: COLORS.background,
+    borderWidth: 1, borderColor: COLORS.border, borderRadius: 8,
   },
+  inputCellLabel: { fontSize: 9, fontFamily: FONTS.mono, color: COLORS.textMuted, letterSpacing: 1.5, marginBottom: 3, textTransform: 'uppercase' },
+  inputCellRow: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
+  inputCellValue: { fontFamily: FONTS.serif, fontSize: 20, color: COLORS.silverBright, flex: 1, padding: 0 },
+  inputCellUnit: { fontSize: 10, fontFamily: FONTS.mono, color: COLORS.textMuted },
+
+  capsSmColor: { fontSize: 9, fontFamily: FONTS.mono, letterSpacing: 1.5, textTransform: 'uppercase' },
+  nutritionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  phaseHint: { fontSize: 9, fontFamily: FONTS.mono, color: COLORS.textMuted, letterSpacing: 1, marginTop: 4, textTransform: 'uppercase' },
+
+  sliderGroup: { marginTop: 4 },
 
   notesInput: {
-    backgroundColor: COLORS.background,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 10,
-    padding: 12,
-    fontSize: 14,
-    color: COLORS.textPrimary,
-    fontFamily: mono,
-    minHeight: 100,
+    backgroundColor: COLORS.background, borderWidth: 1, borderColor: COLORS.border,
+    borderRadius: 8, padding: 12, fontSize: 14, color: COLORS.textSecondary,
+    fontFamily: FONTS.serifItalic, fontStyle: 'italic', minHeight: 80, lineHeight: 22,
   },
+
+  tdeeHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  tdeeRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  tdeeTotal: { fontSize: 11, fontFamily: FONTS.mono, color: COLORS.purpleWarm },
 });

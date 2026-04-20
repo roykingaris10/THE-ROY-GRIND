@@ -54,7 +54,7 @@ const styles = StyleSheet.create({
   text: {
     fontSize: 12,
     color: COLORS.textPrimary,
-    fontFamily: 'Cinzel_400Regular',
+    fontFamily: 'CormorantGaramond_400Regular',
     textAlign: 'center',
     lineHeight: 22,
     fontStyle: 'italic',

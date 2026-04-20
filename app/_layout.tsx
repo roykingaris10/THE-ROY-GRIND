@@ -1,14 +1,16 @@
 import React, { useEffect } from 'react';
-import { StatusBar, View, Text, StyleSheet, Platform, ActivityIndicator } from 'react-native';
+import { StatusBar, View, StyleSheet, ActivityIndicator } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as SplashScreen from 'expo-splash-screen';
+import { useFonts } from 'expo-font';
 import {
-  useFonts,
-  Cinzel_400Regular,
-  Cinzel_700Bold,
-  Cinzel_900Black,
-} from '@expo-google-fonts/cinzel';
+  CormorantGaramond_400Regular,
+  CormorantGaramond_500Medium,
+  CormorantGaramond_600SemiBold,
+  CormorantGaramond_700Bold,
+  CormorantGaramond_400Regular_Italic,
+} from '@expo-google-fonts/cormorant-garamond';
 import {
   JetBrainsMono_400Regular,
   JetBrainsMono_500Medium,
@@ -59,9 +61,11 @@ function RootNav() {
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
-    Cinzel_400Regular,
-    Cinzel_700Bold,
-    Cinzel_900Black,
+    CormorantGaramond_400Regular,
+    CormorantGaramond_500Medium,
+    CormorantGaramond_600SemiBold,
+    CormorantGaramond_700Bold,
+    CormorantGaramond_400Regular_Italic,
     JetBrainsMono_400Regular,
     JetBrainsMono_500Medium,
     JetBrainsMono_700Bold,

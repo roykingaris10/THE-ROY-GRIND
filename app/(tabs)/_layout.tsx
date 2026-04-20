@@ -1,11 +1,17 @@
 import React from 'react';
-import { Platform } from 'react-native';
+import { View, Platform, StyleSheet } from 'react-native';
 import { Tabs } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { COLORS } from '@/lib/constants';
+import { FONTS } from '@/lib/typography';
 
-function TabIcon({ name, color }: { name: React.ComponentProps<typeof FontAwesome>['name']; color: string }) {
-  return <FontAwesome name={name} size={20} color={color} />;
+function TabIcon({ name, color, focused }: { name: React.ComponentProps<typeof FontAwesome>['name']; color: string; focused: boolean }) {
+  return (
+    <View style={styles.iconContainer}>
+      <FontAwesome name={name} size={18} color={color} />
+      {focused && <View style={styles.activeDot} />}
+    </View>
+  );
 }
 
 export default function TabLayout() {
@@ -13,7 +19,7 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: COLORS.silver,
+        tabBarActiveTintColor: COLORS.silverBright,
         tabBarInactiveTintColor: COLORS.textMuted,
         tabBarStyle: {
           backgroundColor: COLORS.card,
@@ -21,51 +27,74 @@ export default function TabLayout() {
           borderTopWidth: 1,
           height: Platform.OS === 'ios' ? 88 : 60,
           paddingBottom: Platform.OS === 'ios' ? 28 : 8,
-          paddingTop: 8,
+          paddingTop: 6,
         },
         tabBarLabelStyle: {
-          fontFamily: 'Cinzel_700Bold',
-          fontSize: 9,
-          letterSpacing: 1,
+          fontFamily: FONTS.mono,
+          fontSize: 8,
+          letterSpacing: 1.5,
           textTransform: 'uppercase',
+          marginTop: 2,
         },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Dashboard',
-          tabBarIcon: ({ color }) => <TabIcon name="th-large" color={color} />,
+          title: 'Chapel',
+          tabBarIcon: ({ color, focused }) => <TabIcon name="th-large" color={color} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="workout"
         options={{
-          title: 'Workout',
-          tabBarIcon: ({ color }) => <TabIcon name="bolt" color={color} />,
+          title: 'Train',
+          tabBarIcon: ({ color, focused }) => <TabIcon name="bolt" color={color} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="log"
         options={{
           title: 'Log',
-          tabBarIcon: ({ color }) => <TabIcon name="book" color={color} />,
+          tabBarIcon: ({ color, focused }) => <TabIcon name="book" color={color} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="lifts"
         options={{
           title: 'Lifts',
-          tabBarIcon: ({ color }) => <TabIcon name="line-chart" color={color} />,
+          tabBarIcon: ({ color, focused }) => <TabIcon name="line-chart" color={color} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="progress"
         options={{
-          title: 'Progress',
-          tabBarIcon: ({ color }) => <TabIcon name="star" color={color} />,
+          title: 'Ascend',
+          tabBarIcon: ({ color, focused }) => <TabIcon name="star" color={color} focused={focused} />,
         }}
       />
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  iconContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activeDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 999,
+    backgroundColor: COLORS.gold,
+    marginTop: 4,
+    ...Platform.select({
+      ios: {
+        shadowColor: COLORS.gold,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.8,
+        shadowRadius: 3,
+      },
+    }),
+  },
+});
