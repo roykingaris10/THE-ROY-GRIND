@@ -16,7 +16,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.invictus.fitness",
-      "buildNumber": "2",
+      "buildNumber": "5",
       "infoPlist": {
         "NSMotionUsageDescription": "Invictus uses motion data to count your daily steps."
       }
