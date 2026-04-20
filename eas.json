@@ -18,8 +18,6 @@
       }
     },
     "production": {
-      "autoSubmit": true,
-      "submitProfile": "production",
       "ios": {}
     }
   },
