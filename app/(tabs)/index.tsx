@@ -96,24 +96,6 @@ export default function DashboardScreen() {
     setRefreshing(false);
   }, [refresh]);
 
-  if (loading) {
-    return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
-        </View>
-      </View>
-    );
-  }
-
-  const bwProgress = STARTING_BW > TARGET_BW
-    ? Math.max(0, Math.min(100, ((STARTING_BW - weightData.latest) / (STARTING_BW - TARGET_BW)) * 100))
-    : 0;
-
-  const finalBench = BENCHMARKS_REALISTIC[BENCHMARKS_REALISTIC.length - 1];
-  const realisticTotal = finalBench.sq + finalBench.bn + finalBench.dl;
-  const stretchTotal = 610;
-
   const consistencyDays = useMemo(() => {
     const days: string[] = [];
     for (let i = 13; i >= 0; i--) {
@@ -132,6 +114,24 @@ export default function DashboardScreen() {
     }
     return days;
   }, [data]);
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+        </View>
+      </View>
+    );
+  }
+
+  const bwProgress = STARTING_BW > TARGET_BW
+    ? Math.max(0, Math.min(100, ((STARTING_BW - weightData.latest) / (STARTING_BW - TARGET_BW)) * 100))
+    : 0;
+
+  const finalBench = BENCHMARKS_REALISTIC[BENCHMARKS_REALISTIC.length - 1];
+  const realisticTotal = finalBench.sq + finalBench.bn + finalBench.dl;
+  const stretchTotal = 610;
 
   const doneCount = consistencyDays.filter(d => d === 'done' || d === 'today').length;
 
