@@ -23,12 +23,15 @@ import { useCalorieBalance } from '@/hooks/useCalorieBalance';
 import { getDateString, getBestE1RM, formatNumber } from '@/lib/helpers';
 import { toRoman } from '@/lib/roman';
 import { playTap } from '@/lib/sounds';
+import { getSaintById } from '@/lib/saints';
+import { getRankForXP, RANK_SAINTS } from '@/lib/rankSaints';
 import type { LiftType } from '@/types';
 
 import { Card, SectionLabel } from '@/components/Card';
 import { MiniChart } from '@/components/MiniChart';
 import { ProgressBar } from '@/components/ProgressBar';
 import { Starfield } from '@/components/Starfield';
+import { SaintFigure, OrthodoxCross, CellIcon } from '@/components/SpiritualIcons';
 
 const STARTING_BW = 130;
 const TARGET_BW = 100;
@@ -285,6 +288,55 @@ export default function DashboardScreen() {
           </View>
         </Card>
 
+        {/* Spiritual Layer */}
+        <TouchableOpacity activeOpacity={0.8} onPress={() => { playTap(); router.push('/cell'); }}>
+          <Card glow style={{ marginBottom: 12 }}>
+            <View style={styles.cellRow}>
+              <View style={styles.cellIconWrap}>
+                <CellIcon size={28} color={COLORS.gold} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.capsLabel}>PRE-WORKOUT RITUAL</Text>
+                <Text style={styles.cellTitle}>Enter The Cell</Text>
+                <Text style={styles.cellSub}>Breathe. Intend. Forge.</Text>
+              </View>
+              <FontAwesome name="chevron-right" size={10} color={COLORS.gold} />
+            </View>
+          </Card>
+        </TouchableOpacity>
+
+        <View style={styles.spiritGrid}>
+          <TouchableOpacity activeOpacity={0.8} onPress={() => { playTap(); router.push('/patron'); }} style={{ flex: 1 }}>
+            <Card style={{ padding: 12, height: 100 }}>
+              <Text style={[styles.capsSm, { color: COLORS.gold, marginBottom: 4 }]}>PATRON</Text>
+              <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                <SaintFigure size={32} robeColor={getSaintById(data?.settings?.patronSaintId || 'george')?.color || COLORS.purpleImperial} />
+              </View>
+              <Text style={styles.spiritLabel}>{getSaintById(data?.settings?.patronSaintId || 'george')?.name.replace('St. ', '') || 'Choose'}</Text>
+            </Card>
+          </TouchableOpacity>
+
+          <TouchableOpacity activeOpacity={0.8} onPress={() => { playTap(); router.push('/iconostasis'); }} style={{ flex: 1 }}>
+            <Card style={{ padding: 12, height: 100 }}>
+              <Text style={[styles.capsSm, { color: COLORS.gold, marginBottom: 4 }]}>RANK</Text>
+              <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                <OrthodoxCross size={28} color={COLORS.silver} />
+              </View>
+              <Text style={styles.spiritLabel}>Neophyte</Text>
+            </Card>
+          </TouchableOpacity>
+
+          <TouchableOpacity activeOpacity={0.8} onPress={() => { playTap(); router.push('/reflection'); }} style={{ flex: 1 }}>
+            <Card style={{ padding: 12, height: 100 }}>
+              <Text style={[styles.capsSm, { color: COLORS.gold, marginBottom: 4 }]}>REFLECT</Text>
+              <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                <Text style={{ fontSize: 24 }}>{'\u2727'}</Text>
+              </View>
+              <Text style={styles.spiritLabel}>Sunday</Text>
+            </Card>
+          </TouchableOpacity>
+        </View>
+
         {/* Consistency 14-day dots */}
         <Card>
           <View style={styles.consistencyHeader}>
@@ -379,6 +431,13 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     backgroundColor: COLORS.purpleImperial,
   },
+
+  cellRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  cellIconWrap: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(201,169,97,0.15)', alignItems: 'center', justifyContent: 'center' },
+  cellTitle: { fontSize: 18, fontFamily: FONTS.serif, color: COLORS.silverBright, marginTop: 2 },
+  cellSub: { fontSize: 10, fontFamily: FONTS.mono, color: COLORS.textMuted, letterSpacing: 1.5, marginTop: 2 },
+  spiritGrid: { flexDirection: 'row', gap: 8, marginBottom: 12 },
+  spiritLabel: { fontSize: 10, fontFamily: FONTS.mono, color: COLORS.silverDim, letterSpacing: 1, textAlign: 'center', marginTop: 4 },
 
   consistencyHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   consistencyCount: { fontSize: 10, fontFamily: FONTS.mono, color: COLORS.silver },
