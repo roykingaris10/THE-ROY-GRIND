@@ -68,6 +68,10 @@ export interface AppSettings {
   autoSyncSteps: boolean;
   defaultEbikeMinutesPerDay: number;
   onboardingComplete: boolean;
+  patronSaintId?: string;
+  cellEnabled?: boolean;
+  healthKitEnabled?: boolean;
+  anthropicApiKey?: string;
 }
 
 export interface AppData {
@@ -167,4 +171,19 @@ export interface GamificationState {
   achievements: Achievement[];
   unlockedCount: number;
   virtues: VirtueStats;
+}
+
+export interface DeloadDecision {
+  date: string;
+  suggested: boolean;
+  severity: 'mild' | 'strong';
+  reasons: string[];
+  accepted: boolean;
+}
+
+export interface DataSource {
+  sleep?: 'manual' | 'healthkit';
+  hrv?: 'manual' | 'healthkit';
+  restingHR?: 'manual' | 'healthkit';
+  steps?: 'manual' | 'healthkit';
 }

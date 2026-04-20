@@ -55,6 +55,10 @@ function RootNav() {
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="onboarding" />
       <Stack.Screen name="settings" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="cell" options={{ animation: 'fade' }} />
+      <Stack.Screen name="reflection" options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="patron" options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="iconostasis" options={{ animation: 'slide_from_right' }} />
     </Stack>
   );
 }
